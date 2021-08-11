@@ -1,8 +1,11 @@
-use std::fmt;
+use std::{error, fmt};
 
+/// Low level error from configuration parsing.
 #[derive(Debug)]
 pub enum Error {
+    /// The version was not found from configuration file.
     VersionNotFound,
+    /// The version found from configuration file is unknown.
     VersionUnknown(String),
 }
 
@@ -15,4 +18,4 @@ impl fmt::Display for Error {
     }
 }
 
-impl std::error::Error for Error {}
+impl error::Error for Error {}
