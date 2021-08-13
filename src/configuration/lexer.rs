@@ -43,19 +43,26 @@ concatenate: []
 
 #[derive(Debug, PartialEq)]
 enum GeneralWordType {
+    Word,
     String,
     Comment,
-    Word,
     EmptyLine,
+    ErrorUncloseString,
 }
 
-// TODO: rename to LexerState
+/// The state of the simple lexer.
 #[derive(Copy, Clone, Debug, PartialEq)]
-enum State {
-    Begin,
+enum SimpleLexerState {
+    /// Initial state.
+    Initial,
+    /// Into a comment.
     Comment,
+    /// Into a word.
     Word,
-    // String,
+    /// Into a literal string.
+    String,
+    /// After an backslah, into a string.
+    StringEscape,
 }
 
 // TODO: line and char index
@@ -64,60 +71,84 @@ enum State {
 fn word_lexer(
     chars: &mut impl Iterator<Item = char>,
     buff: &mut String,
-    state: &mut State,
+    state: &mut SimpleLexerState,
 ) -> Option<GeneralWordType> {
     match (*state, chars.next()) {
-        (State::Begin, None) => None,
-        (State::Begin, Some('\n')) => Some(GeneralWordType::EmptyLine),
-        (State::Begin, Some('\t' | ' ' | '\r')) => word_lexer(chars, buff, state),
-        (State::Begin, Some('#')) => {
-            *state = State::Comment;
-            buff.clear();
-            word_lexer(chars, buff, state)
+        (SimpleLexerState::Initial, None) => return None,
+        (SimpleLexerState::Initial, Some('\n')) => return Some(GeneralWordType::EmptyLine),
+        (SimpleLexerState::Initial, Some('\t' | ' ' | '\r')) => {}
+        (SimpleLexerState::Initial, Some('#')) => {
+            *state = SimpleLexerState::Comment;
         }
-        (State::Begin, Some(c)) => {
-            *state = State::Word;
+        (SimpleLexerState::Initial, Some('"')) => {
+            *state = SimpleLexerState::String;
             buff.clear();
+        }
+        (SimpleLexerState::Initial, Some(c)) => {
+            *state = SimpleLexerState::Word;
             buff.push(c);
-            word_lexer(chars, buff, state)
         }
 
-        (State::Comment, Some('\n') | None) => {
-            *state = State::Begin;
-            Some(GeneralWordType::Comment)
+        (SimpleLexerState::Comment, Some('\n') | None) => {
+            *state = SimpleLexerState::Initial;
+            return Some(GeneralWordType::Comment);
         }
-        (State::Comment, Some(c)) => {
+        (SimpleLexerState::Comment, Some(c)) => {
             buff.push(c);
-            word_lexer(chars, buff, state)
         }
 
-        (State::Word, Some('#')) => {
-            *state = State::Comment;
-            Some(GeneralWordType::Word)
+        (SimpleLexerState::Word, Some('#')) => {
+            *state = SimpleLexerState::Comment;
+            return Some(GeneralWordType::Word);
         }
-        (State::Word, Some('\n' | '\t' | ' ' | '\r') | None) => {
-            *state = State::Begin;
-            Some(GeneralWordType::Word)
+        (SimpleLexerState::Word, Some('\n' | '\t' | ' ' | '\r') | None) => {
+            *state = SimpleLexerState::Initial;
+            return Some(GeneralWordType::Word);
         }
-        (State::Word, Some(c)) => {
+        (SimpleLexerState::Word, Some('"')) => {
+            *state = SimpleLexerState::String;
+            return Some(GeneralWordType::Word);
+        }
+        (SimpleLexerState::Word, Some(c)) => {
             buff.push(c);
-            word_lexer(chars, buff, state)
         }
-    }
+
+        (SimpleLexerState::String, Some('\\')) => {
+            *state = SimpleLexerState::StringEscape;
+        }
+        (SimpleLexerState::String, Some('"')) => {
+            *state = SimpleLexerState::Initial;
+            return Some(GeneralWordType::String);
+        }
+        (SimpleLexerState::String, Some(c)) => {
+            buff.push(c);
+        }
+        (SimpleLexerState::StringEscape, Some(c)) => {
+            *state = SimpleLexerState::String;
+            buff.push('\\');
+            buff.push(c);
+        }
+        (SimpleLexerState::StringEscape | SimpleLexerState::String, None) => {
+            *state = SimpleLexerState::Initial;
+            return Some(GeneralWordType::ErrorUncloseString);
+        }
+    };
+    word_lexer(chars, buff, state)
 }
 
 #[test]
 fn test_word_lexer() {
     let mut buff = String::new();
-    let mut state = State::Word;
-    let mut chars = r#"yolo = [
+    let mut state = SimpleLexerState::Initial;
+    let mut chars = r##"yolo = [
 	{
 		# A comment
-		# "sdfb":
+		"file": $"A great literal string.
+Enclose by double quote \"\".",
 	},
 	yoloPartent1,
 	yoloPartent2,
-]"#
+]"##
     .chars();
 
     let mut t = |r: GeneralWordType, word: &str| {
@@ -130,7 +161,14 @@ fn test_word_lexer() {
     t(GeneralWordType::Word, "[");
     t(GeneralWordType::Word, "{");
     t(GeneralWordType::Comment, " A comment");
-    t(GeneralWordType::Comment, " \"sdfb\":");
+    t(GeneralWordType::String, "file");
+    t(GeneralWordType::Word, ":");
+    t(GeneralWordType::Word, "$");
+    t(
+        GeneralWordType::String,
+        "A great literal string.\nEnclose by double quote \\\"\\\".",
+    );
+    t(GeneralWordType::Word, ",");
     t(GeneralWordType::Word, "},");
     t(GeneralWordType::Word, "yoloPartent1,");
     t(GeneralWordType::Word, "yoloPartent2,");
