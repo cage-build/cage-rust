@@ -1,3 +1,4 @@
+mod char_iter;
 mod simple;
 
 #[derive(Debug)]
