@@ -1,13 +1,8 @@
+use super::Position;
 use core::str::Chars;
 
 pub struct CharItem<'a> {
     chars_iter: Chars<'a>,
-    line: usize,
-    column: usize,
-}
-
-#[derive(Debug, Copy, Clone, std::cmp::PartialEq)]
-pub struct Position {
     line: usize,
     column: usize,
 }

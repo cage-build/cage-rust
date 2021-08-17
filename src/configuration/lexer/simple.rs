@@ -1,4 +1,5 @@
-use super::char_iter::{CharItem, Position};
+use super::char_iter::CharItem;
+use super::Position;
 
 /// Simple lexer, used as iterator to get next token.
 pub struct SimpleLexer<'a> {

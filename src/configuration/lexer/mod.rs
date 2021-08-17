@@ -1,5 +1,8 @@
 mod char_iter;
 mod simple;
+mod word;
+
+use super::Position;
 
 #[derive(Debug)]
 pub enum Word {

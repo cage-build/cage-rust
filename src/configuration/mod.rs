@@ -13,3 +13,10 @@ use lexer::lexer;
 use version::Version;
 
 pub use error::Error;
+
+/// The position of one object in the configuration file.
+#[derive(Debug, Copy, Clone, std::cmp::PartialEq)]
+pub struct Position {
+    pub line: usize,
+    pub column: usize,
+}
