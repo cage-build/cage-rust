@@ -8,8 +8,6 @@ mod tree;
 mod version;
 
 #[allow(unused_imports)]
-use lexer::lexer;
-#[allow(unused_imports)]
 use version::Version;
 
 pub use error::Error;
