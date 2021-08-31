@@ -25,4 +25,11 @@ impl fmt::Display for ConfigurationError {
     }
 }
 
-impl Error for ConfigurationError {}
+impl Error for ConfigurationError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            Self::VersionNotFound | Self::VersionUnknown(_) => None,
+            Self::Lexer(_, err) => Some(err),
+        }
+    }
+}
