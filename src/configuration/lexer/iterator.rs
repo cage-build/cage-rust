@@ -1,7 +1,8 @@
-use super::{CharItem, LexerError, Position, Word};
+use super::{CharItem, Lexer, LexerError, Position, Word};
 
+/// The state of the lexer.
 #[derive(Debug, Copy, Clone)]
-enum State {
+pub enum State {
     /// For initial, or
     Initial,
     /// Inside a variable or a keyword.
@@ -22,17 +23,6 @@ enum State {
     String,
     /// Inside a literal string, after the backslah
     StringEscape,
-}
-
-pub struct Lexer<'a> {
-    chars: CharItem<'a>,
-    state: State,
-    /// The content of the current comment, varibale name, ...
-    buff: String,
-    /// For founded element, send at the comming call of `next` method.
-    comming: Option<Word>,
-    /// The founed error.
-    error: Option<LexerError>,
 }
 
 impl<'a> Iterator for Lexer<'a> {

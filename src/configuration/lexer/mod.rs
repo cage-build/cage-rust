@@ -3,7 +3,18 @@ mod iterator;
 
 use super::Position;
 use char_iter::CharItem;
-pub use iterator::Lexer;
+use iterator::State;
+
+pub struct Lexer<'a> {
+    chars: CharItem<'a>,
+    state: State,
+    /// The content of the current comment, varibale name, ...
+    buff: String,
+    /// For founded element, send at the comming call of `next` method.
+    comming: Option<Word>,
+    /// The founed error.
+    error: Option<LexerError>,
+}
 
 #[derive(Debug, PartialEq)]
 pub enum Word {
