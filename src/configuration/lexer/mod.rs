@@ -5,6 +5,7 @@ use super::Position;
 use char_iter::CharItem;
 use iterator::State;
 
+/// The Lexer, split the input into [`Words`]. It's an iterator.
 pub struct Lexer<'a> {
     chars: CharItem<'a>,
     state: State,
@@ -16,20 +17,21 @@ pub struct Lexer<'a> {
     error: Option<LexerError>,
 }
 
+/// One lexer token. Created with [`Lexer.next()`].
 #[derive(Debug, PartialEq)]
 pub enum Word {
-    /// "tag"
+    /// "tag" keyword
     KeywordTag,
     /// "dir" keyword
     KeywordFile,
     /// "file" keyword
     KeywordDir,
 
-    /// The system variable for package, `pkg`.
+    /// The system variable for package, `$pkg`.
     SystemPackage,
-    /// The system variable run
+    /// The system variable for executable binary, `$run`.
     SystemRun,
-    /// The system variable test
+    /// The system variable for executable test, `$test`.
     SystemTest,
 
     /// One variable.
@@ -51,11 +53,13 @@ pub enum Word {
     PipeFile,
     /// The pipe to a directory
     PipeDirectory,
-
+    /// Opening Symbol for composie a directory. `{`
     DirectoryComposeOpen,
+    /// Closing Symbol for composie a directory. `}`
     DirectoryComposeClose,
-
+    /// Closing Symbol for concatenation a directory. `]`
     DirectoryConcatOpen,
+    /// Closing Symbol for concatenation a directory. `]`
     DirectoryConcatClose,
 
     /// A comment, used to format the build config file.
@@ -93,7 +97,7 @@ Enclose by double quote \"\".",
 ]
 "##,
     );
-    let mut next = || l.next().unwrap();
+    let mut next = || l.next().unwrap().1;
 
     assert_eq!(Word::NewLine, next());
     assert_eq!(Word::Comment(" A comment".to_string()), next());

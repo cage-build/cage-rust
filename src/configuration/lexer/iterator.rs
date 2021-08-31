@@ -26,15 +26,16 @@ pub enum State {
 }
 
 impl<'a> Iterator for Lexer<'a> {
-    type Item = Word;
+    type Item = (Position, Word);
     fn next(&mut self) -> Option<Self::Item> {
         if self.error.is_some() {
             return None;
         } else if let Some(r) = self.comming.take() {
-            return Some(r);
+            return Some((self.chars.position(), r));
         }
         self.buff.clear();
-        self.word_lexer()
+        let p = self.chars.position();
+        self.word_lexer().map(|w| (p, w))
     }
 }
 
@@ -48,12 +49,6 @@ impl<'a> Lexer<'a> {
             comming: None,
             error: None,
         }
-    }
-
-    /// Get the position in the input string.
-    #[inline]
-    fn position(&self) -> Position {
-        self.chars.position()
     }
 
     /// Get a Word from self.buffer, return a keyword or a variable. Always `Some(Ok(_))`.
@@ -87,7 +82,7 @@ impl<'a> Lexer<'a> {
 
     /// Take and return the error. To call at the end.
     pub fn err(self) -> Option<(Position, LexerError)> {
-        let p = self.position();
+        let p = self.chars.position();
         self.error.map(|e| (p, e))
     }
 
