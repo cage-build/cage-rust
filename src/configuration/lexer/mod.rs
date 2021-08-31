@@ -1,11 +1,13 @@
 mod char_iter;
+mod error;
 mod iterator;
 
 use super::Position;
 use char_iter::CharItem;
+pub use error::LexerError;
 use iterator::State;
 
-/// The Lexer, split the input into [`Words`]. It's an iterator.
+/// The Lexer, split the input into [`Word`]. It's an iterator.
 pub struct Lexer<'a> {
     chars: CharItem<'a>,
     state: State,
@@ -67,16 +69,6 @@ pub enum Word {
     Comment(String),
     /// An new line, used to format.
     NewLine,
-}
-
-#[derive(Debug, PartialEq)]
-pub enum LexerError {
-    UnknowChar(char),
-    StringWithoutEnd,
-    HalfDefaultGenerator,
-    UnknowSystem(String),
-    DoubleDollard,
-    EmptySystemVariable,
 }
 
 #[test]

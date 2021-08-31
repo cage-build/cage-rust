@@ -287,7 +287,7 @@ impl<'a> Lexer<'a> {
             }
 
             (State::Dollar, None) => {
-                self.set_err(LexerError::EmptySystemVariable);
+                self.set_err(LexerError::DollardAtEOF);
                 return None;
             }
 

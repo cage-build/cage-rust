@@ -10,7 +10,7 @@ mod version;
 #[allow(unused_imports)]
 use version::Version;
 
-pub use error::Error;
+pub use error::ConfigurationError;
 
 /// The position of one object in the configuration file.
 #[derive(Debug, Copy, Clone, std::cmp::PartialEq)]

@@ -1,4 +1,4 @@
-use super::Error;
+use super::ConfigurationError;
 
 #[derive(std::cmp::PartialEq, Debug)]
 pub enum Version {
@@ -7,11 +7,12 @@ pub enum Version {
 
 impl Version {
     // Get the version from the file.
-    pub fn get(file_content: &str) -> Result<(Version, &str, usize), Error> {
-        let (h, f, line) = Version::get_line(file_content).ok_or(Error::VersionNotFound)?;
+    pub fn get(file_content: &str) -> Result<(Version, &str, usize), ConfigurationError> {
+        let (h, f, line) =
+            Version::get_line(file_content).ok_or(ConfigurationError::VersionNotFound)?;
         let v = match h {
             "CAGE-BUILD-0" => Version::V0,
-            _ => Err(Error::VersionUnknown(h.to_string()))?,
+            _ => Err(ConfigurationError::VersionUnknown(h.to_string()))?,
         };
 
         Ok((v, f, line))
