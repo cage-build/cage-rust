@@ -141,5 +141,5 @@ Enclose by double quote \"\".",
     assert_eq!(Word::NewLine, next());
 
     assert_eq!(None, l.next());
-    assert_eq!(None, l.err());
+    assert_eq!(Ok(()), l.err());
 }

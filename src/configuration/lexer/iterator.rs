@@ -1,3 +1,4 @@
+use super::super::ConfigurationError;
 use super::{CharItem, Lexer, LexerError, Position, Word};
 
 /// The state of the lexer.
@@ -80,10 +81,12 @@ impl<'a> Lexer<'a> {
         self.state = State::Initial;
     }
 
-    /// Take and return the error. To call at the end.
-    pub fn err(self) -> Option<(Position, LexerError)> {
-        let p = self.chars.position();
-        self.error.map(|e| (p, e))
+    /// If an error occure, take it and return the error into [`ConfigurationError::Lexer`].
+    pub fn err(self) -> Result<(), ConfigurationError> {
+        match self.error {
+            None => Ok(()),
+            Some(e) => Err(ConfigurationError::Lexer(self.chars.position(), e)),
+        }
     }
 
     /// Fill self.buff and self.comming
