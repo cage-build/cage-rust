@@ -3,6 +3,8 @@ mod error;
 #[allow(dead_code)]
 mod lexer;
 #[allow(dead_code)]
+mod statement;
+#[allow(dead_code)]
 mod tree;
 #[allow(dead_code)]
 mod version;
