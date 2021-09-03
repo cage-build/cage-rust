@@ -1,5 +1,6 @@
 mod parser;
-use super::Position;
+use super::lexer::Lexer;
+use super::{ConfigurationError, Position};
 pub use parser::Parser;
 
 /// One statement from the file
@@ -11,4 +12,12 @@ pub enum Statement {
     EmptyLine,
     /// A comment
     Comment(String),
+}
+
+/// Parse the configuration file. After fail always return `None`.
+pub fn parse(
+    config_content: &str,
+) -> impl Iterator<Item = Result<Statement, ConfigurationError>> + '_ {
+    let l = Lexer::new(config_content).map(|i| Ok(i));
+    Parser::new(l)
 }
