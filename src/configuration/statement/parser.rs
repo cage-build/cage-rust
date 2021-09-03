@@ -32,6 +32,10 @@ where
     fn initial_state(&mut self) {
         self.state = Some(State::Initial);
     }
+    /// Disable the iterator, used when raise an error.
+    fn fail(&mut self) {
+        self.state = None;
+    }
 }
 impl<I: Iterator<Item = TokenResult>> Iterator for Parser<I> {
     type Item = Result<Statement, ConfigurationError>;
@@ -73,8 +77,9 @@ impl<I: Iterator<Item = TokenResult>> Iterator for Parser<I> {
             }
             (State::WaitTag, Word::NewLine) => {}
             (State::WaitTag, Word::Comment(c)) => return Some(Ok(Statement::Comment(c))),
-            (State::WaitTag, w) => {
-                panic!("Unexpected word: {:?}", w);
+            (State::WaitTag, _) => {
+                self.fail();
+                return Some(Err(ConfigurationError::ParserExpectedTagName(position)));
             }
         };
         self.next()

@@ -12,6 +12,8 @@ mod version;
 #[allow(unused_imports)]
 use version::Version;
 
+use std::fmt;
+
 pub use error::ConfigurationError;
 
 /// The position of one object in the configuration file.
@@ -23,4 +25,9 @@ pub struct Position {
 impl Position {
     #[cfg(test)]
     const ZERO: Position = Position { line: 0, column: 0 };
+}
+impl fmt::Display for Position {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "line:{}, column:{}", self.line, self.column)
+    }
 }
