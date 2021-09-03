@@ -1,8 +1,8 @@
 use super::super::lexer::Word;
-use super::super::ConfigurationError;
+use super::super::{ConfigurationError, Position};
 use super::Statement;
 
-type TokenResult = Result<Word, ConfigurationError>;
+type TokenResult = Result<(Position, Word), ConfigurationError>;
 
 enum State {
     /// Initial state
@@ -40,13 +40,13 @@ impl<I: Iterator<Item = TokenResult>> Iterator for Parser<I> {
             Some(s) => s,
             None => return None,
         };
-        let next = match self.source.next() {
+        let (position, next) = match self.source.next() {
             None => return None,
             Some(Err(e)) => {
                 self.state = None;
                 return Some(Err(e));
             }
-            Some(Ok(w)) => w,
+            Some(Ok((p, w))) => (p, w),
         };
         match (state, next) {
             (State::WaitNewLine, Word::NewLine) => {
@@ -69,7 +69,7 @@ impl<I: Iterator<Item = TokenResult>> Iterator for Parser<I> {
 
             (State::WaitTag, Word::Variable(v)) => {
                 self.state = Some(State::Initial);
-                return Some(Ok(Statement::Tag(v)));
+                return Some(Ok(Statement::Tag(position, v)));
             }
             (State::WaitTag, Word::NewLine) => {}
             (State::WaitTag, Word::Comment(c)) => return Some(Ok(Statement::Comment(c))),
@@ -88,25 +88,38 @@ fn parser_err() {
     assert_eq!(Some(Err(ConfigurationError::VersionNotFound)), p.next());
     assert_eq!(None, p.next());
 }
-
 #[test]
 fn parser_tag_and_newline() {
+    let pos_foo = Position {
+        line: 17,
+        column: 42,
+    };
+    let pos_bar = Position {
+        line: 56,
+        column: 124,
+    };
     let s = vec![
-        Ok(Word::NewLine),
-        Ok(Word::KeywordTag),
-        Ok(Word::NewLine),
-        Ok(Word::Variable("foo".to_string())),
-        Ok(Word::NewLine),
-        Ok(Word::NewLine),
-        Ok(Word::KeywordTag),
-        Ok(Word::Variable("bar".to_string())),
-        Ok(Word::NewLine),
-        Ok(Word::NewLine),
+        Ok((Position::ZERO, Word::NewLine)),
+        Ok((Position::ZERO, Word::KeywordTag)),
+        Ok((Position::ZERO, Word::NewLine)),
+        Ok((pos_foo, Word::Variable("foo".to_string()))),
+        Ok((Position::ZERO, Word::NewLine)),
+        Ok((Position::ZERO, Word::NewLine)),
+        Ok((Position::ZERO, Word::KeywordTag)),
+        Ok((pos_bar, Word::Variable("bar".to_string()))),
+        Ok((Position::ZERO, Word::NewLine)),
+        Ok((Position::ZERO, Word::NewLine)),
     ];
     let mut p = Parser::new(s.into_iter());
-    assert_eq!(Some(Ok(Statement::Tag("foo".to_string()))), p.next());
+    assert_eq!(
+        Some(Ok(Statement::Tag(pos_foo, "foo".to_string()))),
+        p.next()
+    );
     assert_eq!(Some(Ok(Statement::EmptyLine)), p.next());
-    assert_eq!(Some(Ok(Statement::Tag("bar".to_string()))), p.next());
+    assert_eq!(
+        Some(Ok(Statement::Tag(pos_bar, "bar".to_string()))),
+        p.next()
+    );
     assert_eq!(Some(Ok(Statement::EmptyLine)), p.next());
     assert_eq!(None, p.next());
 }

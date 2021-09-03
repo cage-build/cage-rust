@@ -1,11 +1,12 @@
 mod parser;
+use super::Position;
 pub use parser::Parser;
 
 /// One statement from the file
 #[derive(Debug, PartialEq)]
 pub enum Statement {
     /// A statement tag
-    Tag(String),
+    Tag(Position, String),
     /// An empty line
     EmptyLine,
     /// A comment

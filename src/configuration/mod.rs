@@ -20,3 +20,7 @@ pub struct Position {
     pub line: usize,
     pub column: usize,
 }
+impl Position {
+    #[cfg(test)]
+    const ZERO: Position = Position { line: 0, column: 0 };
+}
