@@ -13,6 +13,14 @@ pub enum ConfigurationError {
     Lexer(Position, LexerError),
     /// We expect a tag name after.
     ParserExpectedTagName(Position),
+    /// The parser can not use this generator kind.
+    ParserWrongGeneratorToken(Position, String),
+
+    ParserGeneratorNameToken(Position, String),
+    /// We do not end the parsing of this statement.
+    UnexpectedStatementEnd(Position),
+
+    UnexpectedEnd,
 }
 
 impl Display for ConfigurationError {
@@ -24,6 +32,18 @@ impl Display for ConfigurationError {
             Self::ParserExpectedTagName(p) => {
                 write!(f, "{}, Expected a tag name after `tag` keyword.", p)
             }
+            Self::ParserWrongGeneratorToken(p, s) => write!(
+                f,
+                "{}, the parser can not create a generator from this token {}",
+                p, s
+            ),
+            Self::ParserGeneratorNameToken(p, s) => {
+                write!(f, "{}, can not get generator name from token {}", p, s)
+            }
+            Self::UnexpectedStatementEnd(p) => {
+                write!(f, "{}, unexpected end of this statement.", p)
+            }
+            Self::UnexpectedEnd => f.write_str("Unexpected end when parse a statement"),
         }
     }
 }
@@ -31,9 +51,13 @@ impl Display for ConfigurationError {
 impl Error for ConfigurationError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
-            Self::VersionNotFound | Self::VersionUnknown(_) | Self::ParserExpectedTagName(_) => {
-                None
-            }
+            Self::VersionNotFound
+            | Self::VersionUnknown(_)
+            | Self::ParserExpectedTagName(_)
+            | Self::ParserWrongGeneratorToken(_, _)
+            | Self::ParserGeneratorNameToken(_, _)
+            | Self::UnexpectedStatementEnd(_)
+            | Self::UnexpectedEnd => None,
             Self::Lexer(_, err) => Some(err),
         }
     }

@@ -12,6 +12,48 @@ pub enum Statement {
     EmptyLine,
     /// A comment
     Comment(String),
+    /// A file variable
+    File(Position, String, FileValue),
+}
+
+#[derive(Debug, PartialEq)]
+pub enum FileValue {
+    Literal(String),
+    Name(String),
+    Variable(Variable),
+}
+
+#[derive(Debug, PartialEq)]
+pub struct Generator {
+    position: Position,
+    name: Option<String>,
+    generator: GeneratorKind,
+    args: Vec<String>,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum GeneratorKind {
+    /// A file of generator variable.
+    Variable(String),
+    /// A file in the source filesystem.
+    File(String),
+    /// An external generator URL.
+    Url(String),
+    // UserVariable(String, String),
+    // UserFile(String, String),
+    // UserUrl(String, String),
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Variable {
+    /// A standard variable.
+    Variable(String),
+    /// The system variable for package, `$pkg`.
+    SystemPackage,
+    /// The system variable for executable binary, `$run`.
+    SystemRun,
+    /// The system variable for executable test, `$test`.
+    SystemTest,
 }
 
 /// Parse the configuration file. After fail always return `None`.
