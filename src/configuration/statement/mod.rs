@@ -27,21 +27,18 @@ pub enum FileValue {
 pub struct Generator {
     position: Position,
     name: Option<String>,
-    generator: GeneratorKind,
+    generator: GeneratorValue,
     args: Vec<String>,
 }
 
 #[derive(Debug, PartialEq)]
-pub enum GeneratorKind {
+pub enum GeneratorValue {
     /// A file of generator variable.
     Variable(String),
     /// A file in the source filesystem.
     File(String),
     /// An external generator URL.
     Url(String),
-    // UserVariable(String, String),
-    // UserFile(String, String),
-    // UserUrl(String, String),
 }
 
 #[derive(Debug, PartialEq)]
