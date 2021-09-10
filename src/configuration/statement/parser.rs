@@ -39,14 +39,34 @@ where
         unimplemented!()
     }
 
+    /// Return the next word other than a [`Word::NewLine`] of [`Word::Comment`]
     fn next_expected(&mut self) -> Result<(Position, Word), ConfigurationError> {
         match self.source.next() {
+            Some(Ok((_, Word::NewLine | Word::Comment(_)))) => self.next_expected(),
             Some(Ok((p, w))) => Ok((p, w)),
             Some(Err(e)) => Err(e),
             None => Err(ConfigurationError::UnexpectedEnd),
         }
     }
 
+    /// Peek the next token other than a [`Word::NewLine`] of [`Word::Comment`]. Return None if error.
+    fn peek(&mut self) -> Option<&Word> {
+        while match self.source.peek() {
+            Some(Ok((_, Word::NewLine | Word::Comment(_)))) => true,
+            _ => false,
+        } {
+            self.source.next();
+        }
+
+        match self.source.peek() {
+            None => None,
+            Some(Err(_)) => None,
+            Some(Ok((_, w))) => Some(w),
+        }
+    }
+
+    /// Consume element from the source iterator to parse the generator, element after like comma
+    /// or declaration keyword ("file", "dir", ...) are just peeked, not consumed.
     fn parse_generator_value(&mut self) -> Result<Generator, ConfigurationError> {
         /// Take an world an return the Genrator Kind
         fn word2_generator_kind(
@@ -91,14 +111,6 @@ where
         };
 
         Ok(g)
-    }
-
-    fn peek(&mut self) -> Option<&Word> {
-        match self.source.peek() {
-            None => None,
-            Some(Err(_)) => None,
-            Some(Ok((_, w))) => Some(w),
-        }
     }
 }
 impl<I: Iterator<Item = TokenResult>> Iterator for Parser<I> {
@@ -151,7 +163,9 @@ fn parse_generator_value() {
         )),
         Ok((Position::ZERO, Word::Comma)),
         Ok((pos_gen_2, Word::String("g".to_string()))),
+        Ok((Position::ZERO, Word::NewLine)),
         Ok((Position::ZERO, Word::DefaultGenerator)),
+        Ok((Position::ZERO, Word::Comment("a comment".to_string()))),
         Ok((Position::ZERO, Word::File("generator.wasm".to_string()))),
         Ok((Position::ZERO, Word::Comma)),
     ];
