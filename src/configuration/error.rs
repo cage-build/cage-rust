@@ -23,6 +23,9 @@ pub enum ConfigurationError {
     UnexpectedToken(Position, String, &'static str),
 
     UnexpectedEnd,
+
+    /// Unescape of the string fail.
+    UnescapeFail(Position, char, String),
 }
 
 impl Display for ConfigurationError {
@@ -51,6 +54,9 @@ impl Display for ConfigurationError {
                 p, w, op
             ),
             Self::UnexpectedEnd => f.write_str("Unexpected end when parse a statement"),
+            Self::UnescapeFail(p, c, s) => {
+                write!(f, "{}, can not unescape {:?} (on string {:?})", p, c, s)
+            }
         }
     }
 }
@@ -65,7 +71,8 @@ impl Error for ConfigurationError {
             | Self::ParserGeneratorNameToken(_, _)
             | Self::UnexpectedStatementEnd(_)
             | Self::UnexpectedToken(_, _, _)
-            | Self::UnexpectedEnd => None,
+            | Self::UnexpectedEnd
+            | Self::UnescapeFail(_, _, _) => None,
             Self::Lexer(_, err) => Some(err),
         }
     }

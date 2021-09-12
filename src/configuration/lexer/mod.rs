@@ -1,10 +1,12 @@
 mod char_iter;
 mod error;
+mod escape;
 mod iterator;
 
 use super::Position;
 use char_iter::CharItem;
 pub use error::LexerError;
+pub use escape::escape;
 use iterator::State;
 
 /// The Lexer, split the input into [`Word`]. It's an iterator.
