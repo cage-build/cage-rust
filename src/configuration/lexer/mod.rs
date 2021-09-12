@@ -36,14 +36,13 @@ pub enum Word {
     /// The system variable for executable test, `$test`.
     SystemTest,
 
-    /// One variable.
-    Variable(String),
-
+    /// A simple unqoted string, used for variable and generator args.
+    SimpleString(String),
     /// File path. It does not contain the limit quotes but it is not unescaped.
-    File(String),
-    /// A literal stringn, can be an url or a value used as a file content.
+    QuotedString(String),
+    /// A literal string, can be an url or a value used as a file content.
     /// It does not contain the limit quotes but it is not unescaped.
-    String(String),
+    DollardString(String),
 
     /// Colon, to separate the key and the value, in directory.
     Colon,
@@ -95,18 +94,18 @@ Enclose by double quote \"\".",
     assert_eq!(Word::Comment(" A comment".to_string()), next());
 
     assert_eq!(Word::KeywordTag, next());
-    assert_eq!(Word::Variable("superTag".to_string()), next());
+    assert_eq!(Word::SimpleString("superTag".to_string()), next());
     assert_eq!(Word::NewLine, next());
     assert_eq!(Word::NewLine, next());
 
     assert_eq!(Word::KeywordFile, next());
-    assert_eq!(Word::Variable("front".to_string()), next());
-    assert_eq!(Word::File("front/".to_string()), next());
+    assert_eq!(Word::SimpleString("front".to_string()), next());
+    assert_eq!(Word::QuotedString("front/".to_string()), next());
     assert_eq!(Word::PipeDirectory, next());
-    assert_eq!(Word::File("min".to_string()), next());
+    assert_eq!(Word::QuotedString("min".to_string()), next());
     assert_eq!(Word::DefaultGenerator, next());
     assert_eq!(
-        Word::String("https://exemple.com/minifier".to_string()),
+        Word::DollardString("https://exemple.com/minifier".to_string()),
         next()
     );
     assert_eq!(Word::NewLine, next());
@@ -120,10 +119,12 @@ Enclose by double quote \"\".",
     assert_eq!(Word::DirectoryComposeOpen, next());
     assert_eq!(Word::NewLine, next());
 
-    assert_eq!(Word::File("file.txt".to_string()), next());
+    assert_eq!(Word::QuotedString("file.txt".to_string()), next());
     assert_eq!(Word::Colon, next());
     assert_eq!(
-        Word::String("A great literal string.\nEnclose by double quote \\\"\\\".".to_string()),
+        Word::DollardString(
+            "A great literal string.\nEnclose by double quote \\\"\\\".".to_string()
+        ),
         next()
     );
     assert_eq!(Word::Comma, next());
@@ -133,7 +134,7 @@ Enclose by double quote \"\".",
     assert_eq!(Word::Comma, next());
     assert_eq!(Word::NewLine, next());
 
-    assert_eq!(Word::Variable("variable".to_string()), next());
+    assert_eq!(Word::SimpleString("variable".to_string()), next());
     assert_eq!(Word::Comma, next());
     assert_eq!(Word::NewLine, next());
 

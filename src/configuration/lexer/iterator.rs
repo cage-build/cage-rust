@@ -58,7 +58,7 @@ impl<'a> Lexer<'a> {
             "dir" => Word::KeywordDir,
             "file" => Word::KeywordFile,
             "tag" => Word::KeywordTag,
-            _ => Word::Variable(self.buff.clone()),
+            _ => Word::SimpleString(self.buff.clone()),
         })
     }
 
@@ -125,7 +125,7 @@ impl<'a> Lexer<'a> {
 
             (State::File, Some('"')) => {
                 self.state = State::Initial;
-                return Some(Word::File(self.buff.clone()));
+                return Some(Word::QuotedString(self.buff.clone()));
             }
             (State::File, Some('\\')) => self.state = State::FileEscape,
             (State::File, Some(c)) => self.buff.push(c),
@@ -296,7 +296,7 @@ impl<'a> Lexer<'a> {
 
             (State::String, Some('"')) => {
                 self.state = State::Initial;
-                return Some(Word::String(self.buff.clone()));
+                return Some(Word::DollardString(self.buff.clone()));
             }
             (State::String, Some('\\')) => self.state = State::StringEscape,
             (State::String, Some(c)) => self.buff.push(c),

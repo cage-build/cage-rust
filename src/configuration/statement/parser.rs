@@ -73,9 +73,9 @@ where
             type Error = ConfigurationError;
             fn try_from((p, w): (Position, Word)) -> Result<Self, Self::Error> {
                 match w {
-                    Word::Variable(v) => Ok(GeneratorValue::Variable(v)),
-                    Word::File(f) => Ok(GeneratorValue::File(f)),
-                    Word::String(u) => Ok(GeneratorValue::Url(u)),
+                    Word::SimpleString(v) => Ok(GeneratorValue::Variable(v)),
+                    Word::QuotedString(f) => Ok(GeneratorValue::File(f)),
+                    Word::DollardString(u) => Ok(GeneratorValue::Url(u)),
                     w => Err(ConfigurationError::ParserWrongGeneratorToken(
                         p,
                         format!("{:?}", w),
@@ -87,7 +87,7 @@ where
         let first = self.next_expected()?;
         let mut g: Generator = if self.peek() == Some(&Word::DefaultGenerator) {
             let name = Some(match first.1 {
-                Word::File(s) | Word::String(s) => s,
+                Word::QuotedString(s) | Word::DollardString(s) => s,
                 w => {
                     return Err(ConfigurationError::ParserGeneratorNameToken(
                         first.0,
@@ -112,13 +112,13 @@ where
         };
 
         while match self.peek() {
-            Some(Word::File(_) | Word::Variable(_)) => true,
+            Some(Word::QuotedString(_) | Word::SimpleString(_)) => true,
             _ => false,
         } {
             let (p, w) = self.next_expected()?;
             match w {
-                Word::File(s) => g.args.push((p, s)),
-                Word::Variable(s) => g.args.push((p, s)),
+                Word::QuotedString(s) => g.args.push((p, s)),
+                Word::SimpleString(s) => g.args.push((p, s)),
                 w => {
                     return Err(ConfigurationError::UnexpectedToken(
                         p,
@@ -157,7 +157,7 @@ impl<I: Iterator<Item = TokenResult>> Iterator for Parser<I> {
                 panic!("Unexpected word: {:?}", w);
             }
 
-            (State::WaitTag, Word::Variable(v)) => {
+            (State::WaitTag, Word::SimpleString(v)) => {
                 self.state = State::Initial;
                 return Some(Ok(Statement::Tag(position, v)));
             }
@@ -186,16 +186,19 @@ fn parse_generator_value() {
     let src = vec![
         Ok((
             pos_gen_1,
-            Word::String("https://exemple.com/generator.wasm".to_string()),
+            Word::DollardString("https://exemple.com/generator.wasm".to_string()),
         )),
         Ok((Position::ZERO, Word::Comma)),
-        Ok((pos_gen_2, Word::String("g".to_string()))),
+        Ok((pos_gen_2, Word::DollardString("g".to_string()))),
         Ok((Position::ZERO, Word::NewLine)),
         Ok((Position::ZERO, Word::DefaultGenerator)),
         Ok((Position::ZERO, Word::Comment("a comment".to_string()))),
-        Ok((Position::ZERO, Word::File("generator.wasm".to_string()))),
-        Ok((pos_arg_1, Word::File("arg1".to_string()))),
-        Ok((pos_arg_2, Word::Variable("arg2".to_string()))),
+        Ok((
+            Position::ZERO,
+            Word::QuotedString("generator.wasm".to_string()),
+        )),
+        Ok((pos_arg_1, Word::QuotedString("arg1".to_string()))),
+        Ok((pos_arg_2, Word::SimpleString("arg2".to_string()))),
         Ok((Position::ZERO, Word::Comma)),
     ];
     let mut p = Parser::new(src.into_iter());
@@ -250,11 +253,11 @@ fn parser_tag_and_newline() {
         Ok((Position::ZERO, Word::NewLine)),
         Ok((Position::ZERO, Word::KeywordTag)),
         Ok((Position::ZERO, Word::NewLine)),
-        Ok((pos_foo, Word::Variable("foo".to_string()))),
+        Ok((pos_foo, Word::SimpleString("foo".to_string()))),
         Ok((Position::ZERO, Word::NewLine)),
         Ok((Position::ZERO, Word::NewLine)),
         Ok((Position::ZERO, Word::KeywordTag)),
-        Ok((pos_bar, Word::Variable("bar".to_string()))),
+        Ok((pos_bar, Word::SimpleString("bar".to_string()))),
         Ok((Position::ZERO, Word::NewLine)),
         Ok((Position::ZERO, Word::NewLine)),
     ];
