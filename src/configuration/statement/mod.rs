@@ -1,5 +1,5 @@
 mod parser;
-use super::lexer::Lexer;
+use super::lexer::{escape, Lexer, Word};
 use super::{ConfigurationError, Position};
 pub use parser::Parser;
 
@@ -57,6 +57,16 @@ pub enum Variable {
 pub fn parse(
     config_content: &str,
 ) -> impl Iterator<Item = Result<Statement, ConfigurationError>> + '_ {
-    let l = Lexer::new(config_content).map(|i| Ok(i));
+    let l = Lexer::new(config_content).map(|i| Ok(i)).map(|r| match r {
+        Ok((p, Word::QuotedString(s))) => match escape(p, s) {
+            Ok(s) => Ok((p, Word::QuotedString(s))),
+            Err(e) => Err(e),
+        },
+        Ok((p, Word::DollardString(s))) => match escape(p, s) {
+            Ok(s) => Ok((p, Word::DollardString(s))),
+            Err(e) => Err(e),
+        },
+        _ => r,
+    });
     Parser::new(l)
 }

@@ -25,6 +25,7 @@ impl<I> Parser<I>
 where
     I: Iterator<Item = TokenResult>,
 {
+    /// Take an iterator, the [`Word::DollardString`] and [`Word::QuotedString`] must be escaped.
     pub fn new(source: I) -> Self {
         Self {
             source: source.peekable(),
