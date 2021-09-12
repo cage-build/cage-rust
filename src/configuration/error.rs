@@ -19,6 +19,8 @@ pub enum ConfigurationError {
     ParserGeneratorNameToken(Position, String),
     /// We do not end the parsing of this statement.
     UnexpectedStatementEnd(Position),
+    /// In parsing, unexpected token.
+    UnexpectedToken(Position, String, &'static str),
 
     UnexpectedEnd,
 }
@@ -43,6 +45,11 @@ impl Display for ConfigurationError {
             Self::UnexpectedStatementEnd(p) => {
                 write!(f, "{}, unexpected end of this statement.", p)
             }
+            Self::UnexpectedToken(p, w, op) => write!(
+                f,
+                "{}, unexpected token {} when perform {} operation",
+                p, w, op
+            ),
             Self::UnexpectedEnd => f.write_str("Unexpected end when parse a statement"),
         }
     }
@@ -57,6 +64,7 @@ impl Error for ConfigurationError {
             | Self::ParserWrongGeneratorToken(_, _)
             | Self::ParserGeneratorNameToken(_, _)
             | Self::UnexpectedStatementEnd(_)
+            | Self::UnexpectedToken(_, _, _)
             | Self::UnexpectedEnd => None,
             Self::Lexer(_, err) => Some(err),
         }

@@ -85,7 +85,7 @@ where
         }
 
         let first = self.next_expected()?;
-        let g: Generator = if self.peek() == Some(&Word::DefaultGenerator) {
+        let mut g: Generator = if self.peek() == Some(&Word::DefaultGenerator) {
             let name = Some(match first.1 {
                 Word::File(s) | Word::String(s) => s,
                 w => {
@@ -110,6 +110,24 @@ where
                 args: Vec::new(),
             }
         };
+
+        while match self.peek() {
+            Some(Word::File(_) | Word::Variable(_)) => true,
+            _ => false,
+        } {
+            let (p, w) = self.next_expected()?;
+            match w {
+                Word::File(s) => g.args.push((p, s)),
+                Word::Variable(s) => g.args.push((p, s)),
+                w => {
+                    return Err(ConfigurationError::UnexpectedToken(
+                        p,
+                        format!("{:?}", w),
+                        "generator args",
+                    ))
+                }
+            };
+        }
 
         Ok(g)
     }
@@ -157,6 +175,14 @@ impl<I: Iterator<Item = TokenResult>> Iterator for Parser<I> {
 fn parse_generator_value() {
     let pos_gen_1 = Position { line: 1, column: 5 };
     let pos_gen_2 = Position { line: 2, column: 6 };
+    let pos_arg_1 = Position {
+        line: 3,
+        column: 20,
+    };
+    let pos_arg_2 = Position {
+        line: 3,
+        column: 30,
+    };
     let src = vec![
         Ok((
             pos_gen_1,
@@ -168,6 +194,8 @@ fn parse_generator_value() {
         Ok((Position::ZERO, Word::DefaultGenerator)),
         Ok((Position::ZERO, Word::Comment("a comment".to_string()))),
         Ok((Position::ZERO, Word::File("generator.wasm".to_string()))),
+        Ok((pos_arg_1, Word::File("arg1".to_string()))),
+        Ok((pos_arg_2, Word::Variable("arg2".to_string()))),
         Ok((Position::ZERO, Word::Comma)),
     ];
     let mut p = Parser::new(src.into_iter());
@@ -187,7 +215,10 @@ fn parse_generator_value() {
             position: pos_gen_2,
             name: Some(String::from("g")),
             generator: GeneratorValue::File("generator.wasm".to_string()),
-            args: Vec::new(),
+            args: vec![
+                (pos_arg_1, "arg1".to_string()),
+                (pos_arg_2, "arg2".to_string())
+            ],
         },
         p.parse_generator_value().unwrap()
     );

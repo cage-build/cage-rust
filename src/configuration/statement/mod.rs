@@ -28,7 +28,7 @@ pub struct Generator {
     position: Position,
     name: Option<String>,
     generator: GeneratorValue,
-    args: Vec<String>,
+    args: Vec<(Position, String)>,
 }
 
 #[derive(Debug, PartialEq)]
