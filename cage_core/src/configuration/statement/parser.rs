@@ -1,6 +1,6 @@
 use super::super::lexer::Word;
 use super::super::{ConfigurationError, Position};
-use super::{Parser, State, Statement, TokenResult};
+use super::{Parser, Statement, TokenResult};
 
 impl<I> Parser<I>
 where
@@ -10,7 +10,6 @@ where
     pub fn new(source: I) -> Self {
         Self {
             source: source.peekable(),
-            state: State::Initial,
         }
     }
 
@@ -75,35 +74,6 @@ impl<I: Iterator<Item = TokenResult>> Iterator for Parser<I> {
             Word::Comment(_) | Word::NewLine => self.next(),
             w => unimplemented!("Unkown this word: {:?}", w),
         }
-
-        // match (self.state, next) {
-        //     (State::WaitNewLine, Word::NewLine) => {
-        //         self.initial_state();
-        //         return Some(Ok(Statement::EmptyLine));
-        //     }
-        //     (State::WaitNewLine, Word::Comment(c)) => {
-        //         self.initial_state();
-        //         return Some(Ok(Statement::Comment(c)));
-        //     }
-        //
-        //     (State::Initial, Word::Comment(c)) => return Some(Ok(Statement::Comment(c))),
-        //     (State::Initial, Word::NewLine) => self.state = State::WaitNewLine,
-        //     (State::Initial | State::WaitNewLine, Word::KeywordTag) => self.state = State::WaitTag,
-        //     (State::Initial | State::WaitNewLine, w) => {
-        //         panic!("Unexpected word: {:?}", w);
-        //     }
-        //
-        //     (State::WaitTag, Word::SimpleString(v)) => {
-        //         self.state = State::Initial;
-        //         return Some(Ok(Statement::Tag(position, v)));
-        //     }
-        //     (State::WaitTag, Word::NewLine) => {}
-        //     (State::WaitTag, Word::Comment(c)) => return Some(Ok(Statement::Comment(c))),
-        //     (State::WaitTag, _) => {
-        //         return Some(Err(ConfigurationError::ParserExpectedTagName(position)));
-        //     }
-        // };
-        // self.next()
     }
 }
 
@@ -119,54 +89,4 @@ fn parse_tag_statement() {
         parser.next().unwrap().unwrap()
     );
     assert_eq!(None, parser.next());
-}
-
-#[test]
-fn parser_err() {
-    return;
-    let s = vec![
-        Err(ConfigurationError::VersionNotFound),
-        Ok((Position::ZERO, Word::NewLine)),
-        Ok((Position::ZERO, Word::NewLine)),
-    ];
-    let mut p = Parser::new(s.into_iter());
-    assert_eq!(Some(Err(ConfigurationError::VersionNotFound)), p.next());
-    assert_eq!(Some(Ok(Statement::EmptyLine)), p.next());
-    assert_eq!(None, p.next());
-}
-#[test]
-fn parser_tag_and_newline() {
-    return;
-    let pos_foo = Position {
-        line: 17,
-        column: 42,
-    };
-    let pos_bar = Position {
-        line: 56,
-        column: 124,
-    };
-    let s = vec![
-        Ok((Position::ZERO, Word::NewLine)),
-        Ok((Position::ZERO, Word::KeywordTag)),
-        Ok((Position::ZERO, Word::NewLine)),
-        Ok((pos_foo, Word::SimpleString("foo".to_string()))),
-        Ok((Position::ZERO, Word::NewLine)),
-        Ok((Position::ZERO, Word::NewLine)),
-        Ok((Position::ZERO, Word::KeywordTag)),
-        Ok((pos_bar, Word::SimpleString("bar".to_string()))),
-        Ok((Position::ZERO, Word::NewLine)),
-        Ok((Position::ZERO, Word::NewLine)),
-    ];
-    let mut p = Parser::new(s.into_iter());
-    assert_eq!(
-        Some(Ok(Statement::Tag(pos_foo, "foo".to_string()))),
-        p.next()
-    );
-    assert_eq!(Some(Ok(Statement::EmptyLine)), p.next());
-    assert_eq!(
-        Some(Ok(Statement::Tag(pos_bar, "bar".to_string()))),
-        p.next()
-    );
-    assert_eq!(Some(Ok(Statement::EmptyLine)), p.next());
-    assert_eq!(None, p.next());
 }

@@ -1,7 +1,7 @@
 mod generator;
 mod parser;
 use super::lexer::{escape, Lexer, Word};
-use super::{ConfigurationError, Position};
+use super::{ConfigurationError, Position, TokenResult};
 use std::iter::Peekable;
 
 /// One statement from the file
@@ -78,22 +78,9 @@ pub fn parse(
     Parser::new(l)
 }
 
-type TokenResult = Result<(Position, Word), ConfigurationError>;
-
-#[derive(Debug, Copy, Clone)]
-enum State {
-    /// Initial state
-    Initial,
-    /// Like Initial but if [`Word::NewLine`] is the next token else as Initial.
-    WaitNewLine,
-    /// Wait the tag name
-    WaitTag,
-}
-
 // An iterator of [`Statement`] from an iterator of [`Word`].
 struct Parser<I: Iterator<Item = TokenResult>> {
     source: Peekable<I>,
-    state: State,
 }
 
 /// Create an parser from a vec of word.

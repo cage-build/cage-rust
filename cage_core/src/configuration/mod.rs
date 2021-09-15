@@ -16,6 +16,9 @@ use std::fmt;
 
 pub use error::ConfigurationError;
 
+/// The result of the lexer.
+type TokenResult = Result<(Position, lexer::Word), ConfigurationError>;
+
 /// The position of one object in the configuration file.
 #[derive(Debug, Copy, Clone, std::cmp::PartialEq)]
 pub struct Position {
