@@ -109,22 +109,13 @@ impl<I: Iterator<Item = TokenResult>> Iterator for Parser<I> {
 
 #[test]
 fn parse_tag_statement() {
-    let s = vec![
+    let mut parser = super::test_value(vec![
         Word::KeywordTag,
         Word::SimpleString("simpleTag".to_string()),
-    ];
-    let mut parser = Parser::new(s.into_iter().enumerate().map(|(l, w)| {
-        Ok((
-            Position {
-                line: l + 1,
-                column: 1,
-            },
-            w,
-        ))
-    }));
+    ]);
 
     assert_eq!(
-        Statement::Tag(Position { line: 1, column: 1 }, "simpleTag".to_string()),
+        Statement::Tag(Position { line: 0, column: 1 }, "simpleTag".to_string()),
         parser.next().unwrap().unwrap()
     );
     assert_eq!(None, parser.next());

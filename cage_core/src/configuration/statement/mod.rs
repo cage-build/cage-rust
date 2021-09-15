@@ -95,3 +95,14 @@ struct Parser<I: Iterator<Item = TokenResult>> {
     source: Peekable<I>,
     state: State,
 }
+
+/// Create an parser from a vec of word.
+/// The position column is always 1, and the line is the index.
+#[cfg(test)]
+fn test_value(src: Vec<Word>) -> Parser<impl Iterator<Item = TokenResult>> {
+    Parser::new(
+        src.into_iter()
+            .enumerate()
+            .map(|(line, w)| Ok((Position { line, column: 1 }, w))),
+    )
+}
