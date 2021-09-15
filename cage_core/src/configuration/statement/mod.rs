@@ -1,3 +1,4 @@
+mod generator;
 mod parser;
 use super::lexer::{escape, Lexer, Word};
 use super::{ConfigurationError, Position};
