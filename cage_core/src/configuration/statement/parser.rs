@@ -33,8 +33,23 @@ where
         }
     }
 
-    /// Return the next word other than a [`Word::NewLine`] of [`Word::Comment`]
+    /// Return the next word other. Skip [`Word::NewLine`] or [`Word::Comment`].
+    /// If the next token is a keyword return [`Err(ConfigurationError::UnexpectedEnd)`] because
+    /// a keyword begin a other statement, and this method must be used only by inside statement
+    /// parsing methods.
     pub fn next_expected(&mut self) -> Result<(Position, Word), ConfigurationError> {
+        match self.peek() {
+            Some(
+                &Word::KeywordDir
+                | &Word::KeywordFile
+                | &Word::KeywordGenerator
+                | &Word::KeywordTag,
+            ) => {
+                return Err(ConfigurationError::UnexpectedEnd);
+            }
+            _ => {}
+        };
+
         match self.source.next() {
             Some(Ok((_, Word::NewLine | Word::Comment(_)))) => self.next_expected(),
             Some(Ok((p, w))) => Ok((p, w)),
