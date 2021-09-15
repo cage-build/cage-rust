@@ -15,6 +15,8 @@ pub enum Statement {
     Comment(String),
     /// A file variable
     File(Position, String, FileValue),
+    /// A generator declaration.
+    Generator(Position, String, Generator),
 }
 
 #[derive(Debug, PartialEq)]
@@ -26,15 +28,19 @@ pub enum FileValue {
 
 #[derive(Debug, PartialEq)]
 pub struct Generator {
+    /// The position of the value of the generator.
     position: Position,
+    /// The name given
     name: Option<String>,
+    /// The value of the generator.
     generator: GeneratorValue,
+    /// Arguments for the generator.
     args: Vec<(Position, String)>,
 }
 
 #[derive(Debug, PartialEq)]
 pub enum GeneratorValue {
-    /// A file of generator variable.
+    /// The name of a generator varibale.
     Variable(String),
     /// A file in the source filesystem.
     File(String),

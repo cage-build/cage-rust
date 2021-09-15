@@ -30,6 +30,8 @@ pub enum Word {
     KeywordFile,
     /// "file" keyword
     KeywordDir,
+    /// "gen" keyword
+    KeywordGenerator,
 
     /// The system variable for package, `$pkg`.
     SystemPackage,
