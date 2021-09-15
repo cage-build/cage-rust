@@ -13,13 +13,25 @@ where
             state: State::Initial,
         }
     }
-    /// Reinit the state
-    pub fn initial_state(&mut self) {
-        self.state = State::Initial;
+
+    /// Get Statement::Tag, the "tag" keyword is already consumed.
+    pub fn parse_tag_statement(
+        &mut self,
+        position: Position,
+    ) -> Result<Statement, ConfigurationError> {
+        let name = self.get_statment_name()?;
+        Ok(Statement::Tag(position, name))
     }
 
-    pub fn stake_comment(_: String) {
-        unimplemented!()
+    /// Get the name after the statment ketword ("tag", ...)
+    pub fn get_statment_name(&mut self) -> Result<String, ConfigurationError> {
+        match self.next_expected()? {
+            (_, Word::SimpleString(s)) => Ok(s),
+            (p, w) => Err(ConfigurationError::ParserExpectedStatementName(
+                p,
+                format!("{:?}", w),
+            )),
+        }
     }
 
     /// Return the next word other than a [`Word::NewLine`] of [`Word::Comment`]
@@ -59,6 +71,7 @@ impl<I: Iterator<Item = TokenResult>> Iterator for Parser<I> {
 
         match word {
             Word::KeywordGenerator => Some(self.parse_generator_statement(position)),
+            Word::KeywordTag => Some(self.parse_tag_statement(position)),
             Word::Comment(_) | Word::NewLine => self.next(),
             w => unimplemented!("Unkown this word: {:?}", w),
         }
@@ -92,6 +105,29 @@ impl<I: Iterator<Item = TokenResult>> Iterator for Parser<I> {
         // };
         // self.next()
     }
+}
+
+#[test]
+fn parse_tag_statement() {
+    let s = vec![
+        Word::KeywordTag,
+        Word::SimpleString("simpleTag".to_string()),
+    ];
+    let mut parser = Parser::new(s.into_iter().enumerate().map(|(l, w)| {
+        Ok((
+            Position {
+                line: l + 1,
+                column: 1,
+            },
+            w,
+        ))
+    }));
+
+    assert_eq!(
+        Statement::Tag(Position { line: 1, column: 1 }, "simpleTag".to_string()),
+        parser.next().unwrap().unwrap()
+    );
+    assert_eq!(None, parser.next());
 }
 
 #[test]

@@ -11,8 +11,8 @@ pub enum ConfigurationError {
     VersionUnknown(String),
     /// An error ocure when tokenize the configuration file.
     Lexer(Position, LexerError),
-    /// We expect a tag name after.
-    ParserExpectedTagName(Position),
+    /// We expect a statement name after "tag" | "gen" | "file" | "dir".
+    ParserExpectedStatementName(Position, String),
     /// The parser can not use this generator kind.
     ParserWrongGeneratorToken(Position, String),
 
@@ -34,8 +34,12 @@ impl Display for ConfigurationError {
             Self::VersionNotFound => f.write_str("Version not found"),
             Self::VersionUnknown(v) => write!(f, "The version {:?} is unknown", v),
             Self::Lexer(p, _) => write!(f, "{}, Lexer fail", p),
-            Self::ParserExpectedTagName(p) => {
-                write!(f, "{}, Expected a tag name after `tag` keyword.", p)
+            Self::ParserExpectedStatementName(p, s) => {
+                write!(
+                    f,
+                    "{}, Expected a statement name after statement keyword, found: {}",
+                    p, s
+                )
             }
             Self::ParserWrongGeneratorToken(p, s) => write!(
                 f,
@@ -66,7 +70,7 @@ impl Error for ConfigurationError {
         match self {
             Self::VersionNotFound
             | Self::VersionUnknown(_)
-            | Self::ParserExpectedTagName(_)
+            | Self::ParserExpectedStatementName(_, _)
             | Self::ParserWrongGeneratorToken(_, _)
             | Self::ParserGeneratorNameToken(_, _)
             | Self::UnexpectedStatementEnd(_)

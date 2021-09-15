@@ -13,10 +13,7 @@ where
         &mut self,
         position: Position,
     ) -> Result<Statement, ConfigurationError> {
-        let name = match self.next_expected()? {
-            (_, Word::SimpleString(s)) => s,
-            (_position, _) => panic!("Expected Word::Variable for name"),
-        };
+        let name = self.get_statment_name()?;
         let value = self.parse_generator_value()?;
         Ok(Statement::Generator(position, name, value))
     }
