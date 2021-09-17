@@ -23,6 +23,31 @@ where
 
         Ok(Blob { value, position })
     }
+
+    /// Parse `{{blob},}]`
+    fn parse_concatenation(&mut self) -> Result<BlobValue, ConfigurationError> {
+        if self.peek() == Some(&Word::DirectoryConcatClose) {
+            self.next_expected()?;
+            return Ok(BlobValue::Concatenation(Vec::new()));
+        }
+
+        let mut values = Vec::new();
+        loop {
+            values.push(self.parse_blob()?);
+
+            let (p, w) = self.next_expected()?;
+            match w {
+                Word::DirectoryConcatClose => break,
+                Word::Comma if self.peek() == Some(&Word::DirectoryConcatClose) => {
+                    self.next_expected()?;
+                    break;
+                }
+                Word::Comma => {}
+                _ => unexpected_token(p, w, "concatenation.next_item")?,
+            };
+        }
+        Ok(BlobValue::Concatenation(values))
+    }
 }
 
 #[test]
@@ -78,5 +103,45 @@ fn parser_blob() {
             value: BlobValue::Name(Name::SystemPackage),
         },
         parser.parse_blob().unwrap()
+    );
+}
+
+#[test]
+fn parser_concatenation() {
+    use super::super::Position;
+    let mut parser = super::test_value(vec![
+        Word::DirectoryConcatClose,
+        Word::SimpleString("var".to_string()),
+        Word::Comma,
+        Word::DirectoryConcatClose,
+        Word::SimpleString("var1".to_string()),
+        Word::Comma,
+        Word::SimpleString("var2".to_string()),
+        Word::DirectoryConcatClose,
+    ]);
+
+    assert_eq!(
+        BlobValue::Concatenation(vec![]),
+        parser.parse_concatenation().unwrap()
+    );
+    assert_eq!(
+        BlobValue::Concatenation(vec![Blob {
+            position: Position { line: 1, column: 1 },
+            value: BlobValue::Name(Name::Variable("var".to_string())),
+        },]),
+        parser.parse_concatenation().unwrap()
+    );
+    assert_eq!(
+        BlobValue::Concatenation(vec![
+            Blob {
+                position: Position { line: 4, column: 1 },
+                value: BlobValue::Name(Name::Variable("var1".to_string())),
+            },
+            Blob {
+                position: Position { line: 6, column: 1 },
+                value: BlobValue::Name(Name::Variable("var2".to_string())),
+            },
+        ]),
+        parser.parse_concatenation().unwrap()
     );
 }

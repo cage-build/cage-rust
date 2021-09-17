@@ -38,6 +38,7 @@ pub struct Blob {
 pub enum BlobValue {
     Name(Name),
     Literal(String),
+    Concatenation(Vec<Blob>),
 }
 
 #[derive(Debug, PartialEq)]
