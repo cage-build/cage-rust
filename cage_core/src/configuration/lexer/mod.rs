@@ -66,6 +66,10 @@ pub enum Word {
     DirectoryConcatOpen,
     /// Closing Symbol for concatenation a directory. `]`
     DirectoryConcatClose,
+    /// A open parenthesis. `(`
+    ParenthesisOpen,
+    /// A close parenthesis. `)`
+    ParenthesisClose,
 
     /// A comment, used to format the build config file.
     /// Do not contain the hash `#` and the line return.

@@ -81,6 +81,15 @@ where
         }
         Ok(BlobValue::Concatenation(values))
     }
+
+    fn parse_parenthesis(&mut self) -> Result<Blob, ConfigurationError> {
+        let b = self.parse_blob()?;
+        let (p, w) = self.next_expected()?;
+        match w {
+            Word::ParenthesisClose => Ok(b),
+            w => unexpected_token(p, w, "parenthesis.close"),
+        }
+    }
 }
 
 #[test]
@@ -203,5 +212,21 @@ fn parser_concatenation() {
             },
         ]),
         parser.parse_concatenation().unwrap()
+    );
+}
+#[test]
+fn parse_parenthesis() {
+    use super::super::Position;
+    let mut parser = super::test_value(vec![
+        Word::SimpleString("var".to_string()),
+        Word::ParenthesisClose,
+    ]);
+
+    assert_eq!(
+        Blob {
+            position: Position { line: 0, column: 1 },
+            value: BlobValue::Name(Name::Variable("var".to_string())),
+        },
+        parser.parse_parenthesis().unwrap()
     );
 }
