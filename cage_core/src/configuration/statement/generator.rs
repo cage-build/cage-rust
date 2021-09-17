@@ -1,6 +1,6 @@
 use super::super::lexer::Word;
 use super::super::{ConfigurationError, Position};
-use super::{Generator, GeneratorValue, Parser, Statement, TokenResult};
+use super::{Generator, Name, Parser, Statement, TokenResult};
 use std::convert::TryFrom;
 
 impl<I> Parser<I>
@@ -21,13 +21,13 @@ where
     /// Consume element from the source iterator to parse the generator, element after like comma
     /// or declaration keyword ("file", "dir", ...) are just peeked, not consumed.
     pub fn parse_generator_value(&mut self) -> Result<Generator, ConfigurationError> {
-        impl TryFrom<(Position, Word)> for GeneratorValue {
+        impl TryFrom<(Position, Word)> for Name {
             type Error = ConfigurationError;
             fn try_from((p, w): (Position, Word)) -> Result<Self, Self::Error> {
                 match w {
-                    Word::SimpleString(v) => Ok(GeneratorValue::Variable(v)),
-                    Word::QuotedString(f) => Ok(GeneratorValue::File(f)),
-                    Word::DollardString(u) => Ok(GeneratorValue::Url(u)),
+                    Word::SimpleString(v) => Ok(Name::Variable(v)),
+                    Word::QuotedString(f) => Ok(Name::Source(f)),
+                    Word::DollardString(u) => Ok(Name::Url(u)),
                     w => Err(ConfigurationError::ParserWrongGeneratorToken(
                         p,
                         format!("{:?}", w),
@@ -51,14 +51,14 @@ where
             Generator {
                 position: first.0,
                 name,
-                generator: GeneratorValue::try_from(self.next_expected()?)?,
+                generator: Name::try_from(self.next_expected()?)?,
                 args: Vec::new(),
             }
         } else {
             Generator {
                 position: first.0,
                 name: None,
-                generator: GeneratorValue::try_from(first)?,
+                generator: Name::try_from(first)?,
                 args: Vec::new(),
             }
         };
@@ -106,7 +106,7 @@ fn parse_generator_statement() {
         Generator {
             position: Position { line: 2, column: 1 },
             name: None,
-            generator: GeneratorValue::Url("https://exemple.com/g.wasm".to_string()),
+            generator: Name::Url("https://exemple.com/g.wasm".to_string()),
             args: vec![
                 (Position { line: 3, column: 1 }, "arg1".to_string()),
                 (Position { line: 4, column: 1 }, "arg2".to_string())
@@ -137,7 +137,7 @@ fn parse_generator_value() {
         Generator {
             position: Position { line: 0, column: 1 },
             name: None,
-            generator: GeneratorValue::Url("https://exemple.com/generator.wasm".to_string()),
+            generator: Name::Url("https://exemple.com/generator.wasm".to_string()),
             args: Vec::new(),
         },
         p.parse_generator_value().unwrap()
@@ -147,7 +147,7 @@ fn parse_generator_value() {
         Generator {
             position: Position { line: 2, column: 1 },
             name: Some(String::from("g")),
-            generator: GeneratorValue::File("generator.wasm".to_string()),
+            generator: Name::Source("generator.wasm".to_string()),
             args: vec![
                 (Position { line: 7, column: 1 }, "arg1".to_string()),
                 (Position { line: 8, column: 1 }, "arg2".to_string())

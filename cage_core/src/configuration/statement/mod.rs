@@ -1,3 +1,4 @@
+mod blob;
 mod generator;
 mod parser;
 use super::lexer::{escape, Lexer, Word};
@@ -7,23 +8,42 @@ use std::iter::Peekable;
 /// One statement from the file
 #[derive(Debug, PartialEq)]
 pub enum Statement {
+    /// A file variable
+    File(Position, Identifier, Blob),
     /// A statement tag
     Tag(Position, String),
-    /// An empty line
-    EmptyLine,
-    /// A comment
-    Comment(String),
-    /// A file variable
-    File(Position, String, FileValue),
     /// A generator declaration.
     Generator(Position, String, Generator),
 }
 
 #[derive(Debug, PartialEq)]
-pub enum FileValue {
+pub enum Identifier {
+    /// Simple variable name.
+    Variable(String),
+    /// The system variable for package, `$pkg`.
+    SystemPackage,
+    /// The system variable for executable binary, `$run`.
+    SystemRun,
+    /// The system variable for executable test, `$test`.
+    SystemTest,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct Blob {
+    position: Position,
+    value: BlobValue,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum BlobValue {
+    Name(Name),
     Literal(String),
-    Name(String),
-    Variable(Variable),
+}
+
+#[derive(Debug, PartialEq)]
+pub struct Pipe {
+    source_is_dir: bool,
+    generator: Generator,
 }
 
 #[derive(Debug, PartialEq)]
@@ -33,25 +53,19 @@ pub struct Generator {
     /// The name given
     name: Option<String>,
     /// The value of the generator.
-    generator: GeneratorValue,
+    generator: Name,
     /// Arguments for the generator.
     args: Vec<(Position, String)>,
 }
 
 #[derive(Debug, PartialEq)]
-pub enum GeneratorValue {
+pub enum Name {
     /// The name of a generator varibale.
     Variable(String),
-    /// A file in the source filesystem.
-    File(String),
+    /// A file or a repository from the source filesystem.
+    Source(String),
     /// An external generator URL.
     Url(String),
-}
-
-#[derive(Debug, PartialEq)]
-pub enum Variable {
-    /// A standard variable.
-    Variable(String),
     /// The system variable for package, `$pkg`.
     SystemPackage,
     /// The system variable for executable binary, `$run`.
@@ -92,4 +106,13 @@ fn test_value(src: Vec<Word>) -> Parser<impl Iterator<Item = TokenResult>> {
             .enumerate()
             .map(|(line, w)| Ok((Position { line, column: 1 }, w))),
     )
+}
+
+/// Create a [`ConfigurationError::UnexpectedToken`] into a Result::Err.
+fn unexpected_token<T>(p: Position, w: Word, op: &'static str) -> Result<T, ConfigurationError> {
+    Err(ConfigurationError::UnexpectedToken(
+        p,
+        format!("{:?}", w),
+        op,
+    ))
 }
