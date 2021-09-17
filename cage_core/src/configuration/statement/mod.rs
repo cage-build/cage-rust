@@ -39,6 +39,7 @@ pub enum BlobValue {
     Name(Name),
     Literal(String),
     Concatenation(Vec<Blob>),
+    Composition(Vec<(Position, String, Blob)>),
 }
 
 #[derive(Debug, PartialEq)]

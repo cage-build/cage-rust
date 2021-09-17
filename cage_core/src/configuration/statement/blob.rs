@@ -24,7 +24,40 @@ where
         Ok(Blob { value, position })
     }
 
-    /// Parse `{{blob},}]`
+    /// Parse `{ string_quoted ":" blob "," } [ string_quoted ":" blob ] "}"`
+    fn parse_composition(&mut self) -> Result<BlobValue, ConfigurationError> {
+        if self.peek() == Some(&Word::DirectoryComposeClose) {
+            self.next_expected()?;
+            return Ok(BlobValue::Composition(Vec::new()));
+        }
+
+        let mut values = Vec::new();
+        loop {
+            let (position, name) = match self.next_expected()? {
+                (p, Word::QuotedString(n)) => (p, n),
+                (p, w) => unexpected_token(p, w, "composition.name")?,
+            };
+
+            match self.next_expected()? {
+                (_, Word::Colon) => {}
+                (p, w) => unexpected_token(p, w, "composition.collon")?,
+            };
+
+            let blob = self.parse_blob()?;
+            values.push((position, name, blob));
+
+            let (p, next) = self.next_expected()?;
+            match next {
+                Word::DirectoryComposeClose => break,
+                Word::Comma if self.peek() == Some(&Word::DirectoryComposeClose) => break,
+                Word::Comma => {}
+                w => unexpected_token(p, w, "composition.end_item")?,
+            }
+        }
+        Ok(BlobValue::Composition(values))
+    }
+
+    /// Parse `{ blob "," } [ blob ] "]"`
     fn parse_concatenation(&mut self) -> Result<BlobValue, ConfigurationError> {
         if self.peek() == Some(&Word::DirectoryConcatClose) {
             self.next_expected()?;
@@ -51,7 +84,7 @@ where
 }
 
 #[test]
-fn parser_blob() {
+fn parser_blob_name() {
     use super::super::Position;
     let mut parser = super::test_value(vec![
         Word::SimpleString("var".to_string()),
@@ -105,7 +138,34 @@ fn parser_blob() {
         parser.parse_blob().unwrap()
     );
 }
+#[test]
+fn parse_composition() {
+    use super::super::Position;
+    let mut parser = super::test_value(vec![
+        Word::DirectoryComposeClose,
+        Word::QuotedString("key".to_string()),
+        Word::Colon,
+        Word::SimpleString("var".to_string()),
+        Word::Comma,
+        Word::DirectoryComposeClose,
+    ]);
 
+    assert_eq!(
+        BlobValue::Composition(vec![]),
+        parser.parse_composition().unwrap()
+    );
+    assert_eq!(
+        BlobValue::Composition(vec![(
+            Position { line: 1, column: 1 },
+            "key".to_string(),
+            Blob {
+                position: Position { line: 3, column: 1 },
+                value: BlobValue::Name(Name::Variable("var".to_string()))
+            }
+        )]),
+        parser.parse_composition().unwrap()
+    );
+}
 #[test]
 fn parser_concatenation() {
     use super::super::Position;
