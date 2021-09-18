@@ -13,7 +13,7 @@ pub enum Statement {
     /// A statement tag
     Tag(Position, String),
     /// A generator declaration.
-    Generator(Position, String, Generator),
+    Generator(Position, String, Vec<Generator>),
 }
 
 #[derive(Debug, PartialEq)]

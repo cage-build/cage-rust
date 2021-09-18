@@ -14,8 +14,8 @@ where
         position: Position,
     ) -> Result<Statement, ConfigurationError> {
         let name = self.get_statment_name()?;
-        let value = self.parse_generator_value()?;
-        Ok(Statement::Generator(position, name, value))
+        let chain = self.parse_generator_chain()?;
+        Ok(Statement::Generator(position, name, chain))
     }
 
     /// Parse a generator chain: `{ ( "|" | ">" ) blob }`
@@ -116,13 +116,15 @@ fn parse_generator_statement() {
         Word::QuotedString("arg2".to_string()),
     ]);
 
-    let (pos, name, gen) = if let Statement::Generator(p, n, g) = parser.next().unwrap().unwrap() {
+    let (pos, name, chain) = if let Statement::Generator(p, n, g) = parser.next().unwrap().unwrap()
+    {
         (p, n, g)
     } else {
         panic!("Expected a Statement::Generator")
     };
     assert_eq!(Position { line: 0, column: 1 }, pos);
     assert_eq!("g", name.as_str());
+    assert_eq!(1, chain.len());
     assert_eq!(
         Generator {
             position: Position { line: 2, column: 1 },
@@ -134,7 +136,7 @@ fn parse_generator_statement() {
                 (Position { line: 5, column: 1 }, "arg2".to_string())
             ],
         },
-        gen
+        chain[0]
     );
 
     assert_eq!(None, parser.next());
