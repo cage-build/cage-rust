@@ -1,6 +1,6 @@
 use super::super::lexer::Word;
 use super::super::{ConfigurationError, Position};
-use super::{Generator, Name, Parser, Statement, TokenResult};
+use super::{unexpected_token, Generator, Name, Parser, Statement, TokenResult};
 use std::convert::TryFrom;
 
 impl<I> Parser<I>
@@ -21,6 +21,12 @@ where
     /// Consume element from the source iterator to parse the generator, element after like comma
     /// or declaration keyword ("file", "dir", ...) are just peeked, not consumed.
     pub fn parse_generator_value(&mut self) -> Result<Generator, ConfigurationError> {
+        let (begin_position, input_is_dir) = match self.next_expected()? {
+            (p, Word::PipeDirectory) => (p, true),
+            (p, Word::PipeFile) => (p, false),
+            (p, w) => unexpected_token(p, w, "generator pipe")?,
+        };
+
         impl TryFrom<(Position, Word)> for Name {
             type Error = ConfigurationError;
             fn try_from((p, w): (Position, Word)) -> Result<Self, Self::Error> {
@@ -49,14 +55,16 @@ where
             });
             self.source.next();
             Generator {
-                position: first.0,
+                position: begin_position,
+                input_is_dir,
                 name,
                 generator: Name::try_from(self.next_expected()?)?,
                 args: Vec::new(),
             }
         } else {
             Generator {
-                position: first.0,
+                position: begin_position,
+                input_is_dir,
                 name: None,
                 generator: Name::try_from(first)?,
                 args: Vec::new(),
@@ -90,6 +98,7 @@ fn parse_generator_statement() {
     let mut parser = super::test_value(vec![
         Word::KeywordGenerator,
         Word::SimpleString("g".to_string()),
+        Word::PipeFile,
         Word::DollardString("https://exemple.com/g.wasm".to_string()),
         Word::QuotedString("arg1".to_string()),
         Word::QuotedString("arg2".to_string()),
@@ -105,11 +114,12 @@ fn parse_generator_statement() {
     assert_eq!(
         Generator {
             position: Position { line: 2, column: 1 },
+            input_is_dir: false,
             name: None,
             generator: Name::Url("https://exemple.com/g.wasm".to_string()),
             args: vec![
-                (Position { line: 3, column: 1 }, "arg1".to_string()),
-                (Position { line: 4, column: 1 }, "arg2".to_string())
+                (Position { line: 4, column: 1 }, "arg1".to_string()),
+                (Position { line: 5, column: 1 }, "arg2".to_string())
             ],
         },
         gen
@@ -121,8 +131,10 @@ fn parse_generator_statement() {
 #[test]
 fn parse_generator_value() {
     let mut p = super::test_value(vec![
+        Word::PipeFile,
         Word::DollardString("https://exemple.com/generator.wasm".to_string()),
         Word::Comma,
+        Word::PipeDirectory,
         Word::DollardString("g".to_string()),
         Word::NewLine,
         Word::DefaultGenerator,
@@ -136,6 +148,7 @@ fn parse_generator_value() {
     assert_eq!(
         Generator {
             position: Position { line: 0, column: 1 },
+            input_is_dir: false,
             name: None,
             generator: Name::Url("https://exemple.com/generator.wasm".to_string()),
             args: Vec::new(),
@@ -145,12 +158,19 @@ fn parse_generator_value() {
     p.source.next();
     assert_eq!(
         Generator {
-            position: Position { line: 2, column: 1 },
+            position: Position { line: 3, column: 1 },
+            input_is_dir: true,
             name: Some(String::from("g")),
             generator: Name::Source("generator.wasm".to_string()),
             args: vec![
-                (Position { line: 7, column: 1 }, "arg1".to_string()),
-                (Position { line: 8, column: 1 }, "arg2".to_string())
+                (Position { line: 9, column: 1 }, "arg1".to_string()),
+                (
+                    Position {
+                        line: 10,
+                        column: 1
+                    },
+                    "arg2".to_string()
+                )
             ],
         },
         p.parse_generator_value().unwrap()

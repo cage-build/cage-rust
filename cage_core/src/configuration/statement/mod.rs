@@ -52,6 +52,8 @@ pub struct Pipe {
 pub struct Generator {
     /// The position of the value of the generator.
     position: Position,
+    /// The input is a directory or a file.
+    input_is_dir: bool,
     /// The name given
     name: Option<String>,
     /// The value of the generator.
