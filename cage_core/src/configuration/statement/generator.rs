@@ -18,6 +18,18 @@ where
         Ok(Statement::Generator(position, name, value))
     }
 
+    /// Parse a generator chain: `{ ( "|" | ">" ) blob }`
+    fn parse_generator_chain(&mut self) -> Result<Vec<Generator>, ConfigurationError> {
+        let mut chain = Vec::new();
+        while match self.peek() {
+            Some(&Word::PipeFile | &Word::PipeDirectory) => true,
+            _ => false,
+        } {
+            chain.push(self.parse_generator_value()?);
+        }
+        Ok(chain)
+    }
+
     /// Consume element from the source iterator to parse the generator, element after like comma
     /// or declaration keyword ("file", "dir", ...) are just peeked, not consumed.
     pub fn parse_generator_value(&mut self) -> Result<Generator, ConfigurationError> {
@@ -127,13 +139,13 @@ fn parse_generator_statement() {
 
     assert_eq!(None, parser.next());
 }
-
 #[test]
-fn parse_generator_value() {
+fn parse_generator_chain() {
     let mut p = super::test_value(vec![
+        // first generator
         Word::PipeFile,
         Word::DollardString("https://exemple.com/generator.wasm".to_string()),
-        Word::Comma,
+        // second generator
         Word::PipeDirectory,
         Word::DollardString("g".to_string()),
         Word::NewLine,
@@ -142,8 +154,12 @@ fn parse_generator_value() {
         Word::QuotedString("generator.wasm".to_string()),
         Word::QuotedString("arg1".to_string()),
         Word::SimpleString("arg2".to_string()),
+        // other part
         Word::Comma,
     ]);
+
+    let chain = p.parse_generator_chain().unwrap();
+    assert_eq!(2, chain.len());
 
     assert_eq!(
         Generator {
@@ -153,26 +169,20 @@ fn parse_generator_value() {
             generator: Name::Url("https://exemple.com/generator.wasm".to_string()),
             args: Vec::new(),
         },
-        p.parse_generator_value().unwrap()
+        chain[0],
     );
     p.source.next();
     assert_eq!(
         Generator {
-            position: Position { line: 3, column: 1 },
+            position: Position { line: 2, column: 1 },
             input_is_dir: true,
             name: Some(String::from("g")),
             generator: Name::Source("generator.wasm".to_string()),
             args: vec![
-                (Position { line: 9, column: 1 }, "arg1".to_string()),
-                (
-                    Position {
-                        line: 10,
-                        column: 1
-                    },
-                    "arg2".to_string()
-                )
+                (Position { line: 8, column: 1 }, "arg1".to_string()),
+                (Position { line: 9, column: 1 }, "arg2".to_string())
             ],
         },
-        p.parse_generator_value().unwrap()
+        chain[1],
     );
 }
