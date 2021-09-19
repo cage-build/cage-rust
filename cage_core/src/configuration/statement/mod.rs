@@ -43,12 +43,6 @@ pub enum BlobValue {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct Pipe {
-    source_is_dir: bool,
-    generator: Generator,
-}
-
-#[derive(Debug, PartialEq)]
 pub struct Generator {
     /// The position of the value of the generator.
     position: Position,
@@ -57,7 +51,7 @@ pub struct Generator {
     /// The name given
     name: Option<String>,
     /// The value of the generator.
-    generator: Name,
+    generator: BlobValue,
     /// Arguments for the generator.
     args: Vec<(Position, String)>,
 }

@@ -1,7 +1,6 @@
 use super::super::lexer::Word;
 use super::super::{ConfigurationError, Position};
-use super::{unexpected_token, Generator, Name, Parser, Statement, TokenResult};
-use std::convert::TryFrom;
+use super::{unexpected_token, BlobValue, Generator, Name, Parser, Statement, TokenResult};
 
 impl<I> Parser<I>
 where
@@ -39,48 +38,26 @@ where
             (p, w) => unexpected_token(p, w, "generator pipe")?,
         };
 
-        impl TryFrom<(Position, Word)> for Name {
-            type Error = ConfigurationError;
-            fn try_from((p, w): (Position, Word)) -> Result<Self, Self::Error> {
-                match w {
-                    Word::SimpleString(v) => Ok(Name::Variable(v)),
-                    Word::QuotedString(f) => Ok(Name::Source(f)),
-                    Word::DollardString(u) => Ok(Name::Url(u)),
-                    w => Err(ConfigurationError::ParserWrongGeneratorToken(
-                        p,
-                        format!("{:?}", w),
-                    )),
-                }
+        let (core, name) = {
+            let first = self.next_expected()?;
+            if self.peek() == Some(&Word::DefaultGenerator) {
+                let name = match first.1 {
+                    Word::QuotedString(s) | Word::DollardString(s) => s,
+                    _ => unexpected_token(first.0, first.1, "generator name")?,
+                };
+                self.next_expected()?;
+                (self.next_expected()?, Some(name))
+            } else {
+                (first, None)
             }
-        }
+        };
 
-        let first = self.next_expected()?;
-        let mut g: Generator = if self.peek() == Some(&Word::DefaultGenerator) {
-            let name = Some(match first.1 {
-                Word::QuotedString(s) | Word::DollardString(s) => s,
-                w => {
-                    return Err(ConfigurationError::ParserGeneratorNameToken(
-                        first.0,
-                        format!("{:?}", w),
-                    ));
-                }
-            });
-            self.source.next();
-            Generator {
-                position: begin_position,
-                input_is_dir,
-                name,
-                generator: Name::try_from(self.next_expected()?)?,
-                args: Vec::new(),
-            }
-        } else {
-            Generator {
-                position: begin_position,
-                input_is_dir,
-                name: None,
-                generator: Name::try_from(first)?,
-                args: Vec::new(),
-            }
+        let mut g = Generator {
+            position: begin_position,
+            input_is_dir,
+            name,
+            generator: self.parse_generator_core(core)?,
+            args: Vec::new(),
         };
 
         while match self.peek() {
@@ -91,17 +68,26 @@ where
             match w {
                 Word::QuotedString(s) => g.args.push((p, s)),
                 Word::SimpleString(s) => g.args.push((p, s)),
-                w => {
-                    return Err(ConfigurationError::UnexpectedToken(
-                        p,
-                        format!("{:?}", w),
-                        "generator args",
-                    ))
-                }
+                w => unexpected_token(p, w, "generator args")?,
             };
         }
 
         Ok(g)
+    }
+
+    /// Parse the generator core value, from a first readed value and follow if
+    // it's in a parenthesis. Syntax: `name | ( blob )`
+    fn parse_generator_core(
+        &mut self,
+        (p, w): (Position, Word),
+    ) -> Result<BlobValue, ConfigurationError> {
+        match w {
+            Word::SimpleString(v) => Ok(BlobValue::Name(Name::Variable(v))),
+            Word::QuotedString(f) => Ok(BlobValue::Name(Name::Source(f))),
+            Word::DollardString(u) => Ok(BlobValue::Name(Name::Url(u))),
+            Word::ParenthesisOpen => Ok(self.parse_parenthesis()?.value),
+            w => unexpected_token(p, w, "generator value"),
+        }
     }
 }
 
@@ -130,7 +116,7 @@ fn parse_generator_statement() {
             position: Position { line: 2, column: 1 },
             input_is_dir: false,
             name: None,
-            generator: Name::Url("https://exemple.com/g.wasm".to_string()),
+            generator: BlobValue::Name(Name::Url("https://exemple.com/g.wasm".to_string())),
             args: vec![
                 (Position { line: 4, column: 1 }, "arg1".to_string()),
                 (Position { line: 5, column: 1 }, "arg2".to_string())
@@ -150,10 +136,10 @@ fn parse_generator_chain() {
         // second generator
         Word::PipeDirectory,
         Word::DollardString("g".to_string()),
-        Word::NewLine,
         Word::DefaultGenerator,
-        Word::Comment("a comment".to_string()),
+        Word::ParenthesisOpen,
         Word::QuotedString("generator.wasm".to_string()),
+        Word::ParenthesisClose,
         Word::QuotedString("arg1".to_string()),
         Word::SimpleString("arg2".to_string()),
         // other part
@@ -168,7 +154,7 @@ fn parse_generator_chain() {
             position: Position { line: 0, column: 1 },
             input_is_dir: false,
             name: None,
-            generator: Name::Url("https://exemple.com/generator.wasm".to_string()),
+            generator: BlobValue::Name(Name::Url("https://exemple.com/generator.wasm".to_string())),
             args: Vec::new(),
         },
         chain[0],
@@ -179,7 +165,7 @@ fn parse_generator_chain() {
             position: Position { line: 2, column: 1 },
             input_is_dir: true,
             name: Some(String::from("g")),
-            generator: Name::Source("generator.wasm".to_string()),
+            generator: BlobValue::Name(Name::Source("generator.wasm".to_string())),
             args: vec![
                 (Position { line: 8, column: 1 }, "arg1".to_string()),
                 (Position { line: 9, column: 1 }, "arg2".to_string())

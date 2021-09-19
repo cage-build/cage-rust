@@ -82,7 +82,7 @@ where
         Ok(BlobValue::Concatenation(values))
     }
 
-    fn parse_parenthesis(&mut self) -> Result<Blob, ConfigurationError> {
+    pub fn parse_parenthesis(&mut self) -> Result<Blob, ConfigurationError> {
         let b = self.parse_blob()?;
         let (p, w) = self.next_expected()?;
         match w {
