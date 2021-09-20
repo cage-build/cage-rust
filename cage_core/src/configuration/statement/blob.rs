@@ -6,7 +6,7 @@ impl<I> Parser<I>
 where
     I: Iterator<Item = TokenResult>,
 {
-    fn parse_blob(&mut self) -> Result<Blob, ConfigurationError> {
+    pub fn parse_blob(&mut self) -> Result<Blob, ConfigurationError> {
         let (position, word) = self.next_expected()?;
 
         let value = match word {

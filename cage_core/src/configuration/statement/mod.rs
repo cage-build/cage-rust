@@ -8,7 +8,9 @@ use std::iter::Peekable;
 /// One statement from the file
 #[derive(Debug, PartialEq)]
 pub enum Statement {
-    /// A file variable
+    /// A directory variable declaration
+    Directory(Position, Identifier, Blob),
+    /// A file variable declaration
     File(Position, Identifier, Blob),
     /// A statement tag
     Tag(Position, String),

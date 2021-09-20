@@ -1,6 +1,6 @@
 use super::super::lexer::Word;
 use super::super::{ConfigurationError, Position};
-use super::{Parser, Statement, TokenResult};
+use super::{unexpected_token, Blob, Identifier, Parser, Statement, TokenResult};
 
 impl<I> Parser<I>
 where
@@ -22,7 +22,24 @@ where
         Ok(Statement::Tag(position, name))
     }
 
-    /// Get the name after the statment ketword ("tag", ...)
+    /// Get the identifier for file and directory statement.
+    fn get_statement_identifier(&mut self) -> Result<Identifier, ConfigurationError> {
+        let (position, word) = self.next_expected()?;
+        Ok(match word {
+            Word::SimpleString(s) => Identifier::Variable(s),
+            Word::SystemRun => Identifier::SystemRun,
+            Word::SystemPackage => Identifier::SystemPackage,
+            Word::SystemTest => Identifier::SystemTest,
+            _ => unexpected_token(position, word, "statement identivfier")?,
+        })
+    }
+
+    /// Get the content of a file of directory sstatement. `id blob`
+    fn id_and_content(&mut self) -> Result<(Identifier, Blob), ConfigurationError> {
+        Ok((self.get_statement_identifier()?, self.parse_blob()?))
+    }
+
+    /// Get the name after the tag of generator statment keyword.
     pub fn get_statment_name(&mut self) -> Result<String, ConfigurationError> {
         match self.next_expected()? {
             (_, Word::SimpleString(s)) => Ok(s),
@@ -34,8 +51,8 @@ where
     }
 
     /// Return the next word other. Skip [`Word::NewLine`] or [`Word::Comment`].
-    /// If the next token is a keyword return [`Err(ConfigurationError::UnexpectedEnd)`] because
-    /// a keyword begin a other statement, and this method must be used only by inside statement
+    /// If the next token is a keyword, returns [`Err(ConfigurationError::UnexpectedEnd)`] because
+    /// this keyword begin a other statement, and this method must be used only by inside statement
     /// parsing methods.
     pub fn next_expected(&mut self) -> Result<(Position, Word), ConfigurationError> {
         match self.peek() {
@@ -86,12 +103,42 @@ impl<I: Iterator<Item = TokenResult>> Iterator for Parser<I> {
         match word {
             Word::KeywordGenerator => Some(self.parse_generator_statement(position)),
             Word::KeywordTag => Some(self.parse_tag_statement(position)),
+            Word::KeywordDir => match self.id_and_content() {
+                Ok((id, blob)) => Some(Ok(Statement::Directory(position, id, blob))),
+                Err(e) => Some(Err(e)),
+            },
+            Word::KeywordFile => match self.id_and_content() {
+                Ok((id, blob)) => Some(Ok(Statement::File(position, id, blob))),
+                Err(e) => Some(Err(e)),
+            },
             Word::Comment(_) | Word::NewLine => self.next(),
-            w => unimplemented!("Unkown this word: {:?}", w),
+            _ => Some(unexpected_token(position, word, "statement begin")),
         }
     }
 }
 
+#[test]
+fn parse_file_statement() {
+    use super::{BlobValue, Position};
+
+    let mut parser = super::test_value(vec![
+        Word::KeywordFile,
+        Word::SimpleString("f".to_string()),
+        Word::DollardString("The file content".to_string()),
+    ]);
+    assert_eq!(
+        Statement::File(
+            Position { line: 0, column: 1 },
+            Identifier::Variable("f".to_string()),
+            Blob {
+                position: Position { line: 2, column: 1 },
+                value: BlobValue::Literal("The file content".to_string()),
+                pipes: Vec::new(),
+            }
+        ),
+        parser.next().unwrap().unwrap()
+    );
+}
 #[test]
 fn parse_tag_statement() {
     let mut parser = super::test_value(vec![
