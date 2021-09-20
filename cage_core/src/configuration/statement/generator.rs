@@ -18,7 +18,7 @@ where
     }
 
     /// Parse a generator chain: `{ ( "|" | ">" ) blob }`
-    fn parse_generator_chain(&mut self) -> Result<Vec<Generator>, ConfigurationError> {
+    pub fn parse_generator_chain(&mut self) -> Result<Vec<Generator>, ConfigurationError> {
         let mut chain = Vec::new();
         while match self.peek() {
             Some(&Word::PipeFile | &Word::PipeDirectory) => true,

@@ -16,12 +16,18 @@ where
             Word::SystemRun => BlobValue::Name(Name::SystemRun),
             Word::SystemTest => BlobValue::Name(Name::SystemTest),
             Word::SystemPackage => BlobValue::Name(Name::SystemPackage),
-            Word::DirectoryConcatOpen => unimplemented!(),
-            Word::DirectoryComposeOpen => unimplemented!(),
+            Word::DirectoryConcatOpen => self.parse_concatenation()?,
+            Word::DirectoryComposeOpen => self.parse_composition()?,
             w => unexpected_token(position, w, "blob")?,
         };
 
-        Ok(Blob { value, position })
+        let pipes = self.parse_generator_chain()?;
+
+        Ok(Blob {
+            value,
+            position,
+            pipes,
+        })
     }
 
     /// Parse `{ string_quoted ":" blob "," } [ string_quoted ":" blob ] "}"`
@@ -93,6 +99,35 @@ where
 }
 
 #[test]
+fn parse_pipes() {
+    use super::super::Position;
+
+    let mut parser = super::test_value(vec![
+        Word::QuotedString(".".to_string()),
+        Word::PipeDirectory,
+        Word::DollardString("https://exemple.com/g.wasm".to_string()),
+        Word::QuotedString("arg1".to_string()),
+        Word::QuotedString("arg2".to_string()),
+    ]);
+    assert_eq!(
+        Blob {
+            position: Position { line: 0, column: 1 },
+            value: BlobValue::Name(Name::Source(".".to_string())),
+            pipes: vec![super::Generator {
+                position: Position { line: 1, column: 1 },
+                input_is_dir: true,
+                name: None,
+                generator: BlobValue::Name(Name::Url("https://exemple.com/g.wasm".to_string())),
+                args: vec![
+                    (Position { line: 3, column: 1 }, "arg1".to_string()),
+                    (Position { line: 4, column: 1 }, "arg2".to_string())
+                ],
+            },],
+        },
+        parser.parse_blob().unwrap()
+    );
+}
+#[test]
 fn parser_blob_name() {
     use super::super::Position;
     let mut parser = super::test_value(vec![
@@ -108,6 +143,7 @@ fn parser_blob_name() {
         Blob {
             position: Position { line: 0, column: 1 },
             value: BlobValue::Name(Name::Variable("var".to_string())),
+            pipes: Vec::new(),
         },
         parser.parse_blob().unwrap()
     );
@@ -115,6 +151,7 @@ fn parser_blob_name() {
         Blob {
             position: Position { line: 1, column: 1 },
             value: BlobValue::Name(Name::Source(".".to_string())),
+            pipes: Vec::new(),
         },
         parser.parse_blob().unwrap()
     );
@@ -122,6 +159,7 @@ fn parser_blob_name() {
         Blob {
             position: Position { line: 2, column: 1 },
             value: BlobValue::Literal("https://exemple.com/foo.zip".to_string()),
+            pipes: Vec::new(),
         },
         parser.parse_blob().unwrap()
     );
@@ -129,6 +167,7 @@ fn parser_blob_name() {
         Blob {
             position: Position { line: 3, column: 1 },
             value: BlobValue::Name(Name::SystemRun),
+            pipes: Vec::new(),
         },
         parser.parse_blob().unwrap()
     );
@@ -136,6 +175,7 @@ fn parser_blob_name() {
         Blob {
             position: Position { line: 4, column: 1 },
             value: BlobValue::Name(Name::SystemTest),
+            pipes: Vec::new(),
         },
         parser.parse_blob().unwrap()
     );
@@ -143,6 +183,7 @@ fn parser_blob_name() {
         Blob {
             position: Position { line: 5, column: 1 },
             value: BlobValue::Name(Name::SystemPackage),
+            pipes: Vec::new(),
         },
         parser.parse_blob().unwrap()
     );
@@ -169,7 +210,8 @@ fn parse_composition() {
             "key".to_string(),
             Blob {
                 position: Position { line: 3, column: 1 },
-                value: BlobValue::Name(Name::Variable("var".to_string()))
+                value: BlobValue::Name(Name::Variable("var".to_string())),
+                pipes: Vec::new(),
             }
         )]),
         parser.parse_composition().unwrap()
@@ -197,6 +239,7 @@ fn parser_concatenation() {
         BlobValue::Concatenation(vec![Blob {
             position: Position { line: 1, column: 1 },
             value: BlobValue::Name(Name::Variable("var".to_string())),
+            pipes: Vec::new(),
         },]),
         parser.parse_concatenation().unwrap()
     );
@@ -205,10 +248,12 @@ fn parser_concatenation() {
             Blob {
                 position: Position { line: 4, column: 1 },
                 value: BlobValue::Name(Name::Variable("var1".to_string())),
+                pipes: Vec::new(),
             },
             Blob {
                 position: Position { line: 6, column: 1 },
                 value: BlobValue::Name(Name::Variable("var2".to_string())),
+                pipes: Vec::new(),
             },
         ]),
         parser.parse_concatenation().unwrap()
@@ -226,6 +271,7 @@ fn parse_parenthesis() {
         Blob {
             position: Position { line: 0, column: 1 },
             value: BlobValue::Name(Name::Variable("var".to_string())),
+            pipes: Vec::new(),
         },
         parser.parse_parenthesis().unwrap()
     );

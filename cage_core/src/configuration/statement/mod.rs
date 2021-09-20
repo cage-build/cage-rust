@@ -32,6 +32,7 @@ pub enum Identifier {
 pub struct Blob {
     position: Position,
     value: BlobValue,
+    pipes: Vec<Generator>,
 }
 
 #[derive(Debug, PartialEq)]
