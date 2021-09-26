@@ -1,6 +1,6 @@
 use super::super::lexer::Word;
 use super::super::ConfigurationError;
-use super::{unexpected_token, Blob, BlobValue, Name, Parser, TokenResult};
+use super::{unexpected_token, Blob, BlobValue, Name, Parser, Position, TokenResult};
 
 impl<I> Parser<I>
 where
@@ -41,23 +41,24 @@ where
         loop {
             let (position, name) = match self.next_expected()? {
                 (p, Word::QuotedString(n)) => (p, n),
-                (p, w) => unexpected_token(p, w, "composition.name")?,
+                (p, w) => return unexpected_token(p, w, "composition.name"),
             };
-
             match self.next_expected()? {
                 (_, Word::Colon) => {}
-                (p, w) => unexpected_token(p, w, "composition.collon")?,
+                (p, w) => return unexpected_token(p, w, "composition.collon"),
             };
-
             let blob = self.parse_blob()?;
             values.push((position, name, blob));
 
             let (p, next) = self.next_expected()?;
             match next {
                 Word::DirectoryComposeClose => break,
-                Word::Comma if self.peek() == Some(&Word::DirectoryComposeClose) => break,
+                Word::Comma if self.peek() == Some(&Word::DirectoryComposeClose) => {
+                    self.next_expected()?;
+                    break;
+                }
                 Word::Comma => {}
-                w => unexpected_token(p, w, "composition.end_item")?,
+                w => return unexpected_token(p, w, "composition.end_item"),
             }
         }
         Ok(BlobValue::Composition(values))
@@ -88,8 +89,12 @@ where
         Ok(BlobValue::Concatenation(values))
     }
 
-    pub fn parse_parenthesis(&mut self) -> Result<Blob, ConfigurationError> {
-        let b = self.parse_blob()?;
+    pub fn parse_parenthesis(&mut self, p: Position) -> Result<Blob, ConfigurationError> {
+        let b = {
+            let mut b = self.parse_blob()?;
+            b.position = p;
+            b
+        };
         let (p, w) = self.next_expected()?;
         match w {
             Word::ParenthesisClose => Ok(b),
@@ -99,7 +104,7 @@ where
 }
 
 #[test]
-fn parse_pipes() {
+fn test_parse_pipes() {
     use super::super::Position;
 
     let mut parser = super::test_value(vec![
@@ -128,7 +133,7 @@ fn parse_pipes() {
     );
 }
 #[test]
-fn parser_blob_name() {
+fn test_parser_blob_name() {
     use super::super::Position;
     let mut parser = super::test_value(vec![
         Word::SimpleString("var".to_string()),
@@ -189,7 +194,7 @@ fn parser_blob_name() {
     );
 }
 #[test]
-fn parse_composition() {
+fn test_parse_composition() {
     use super::super::Position;
     let mut parser = super::test_value(vec![
         Word::DirectoryComposeClose,
@@ -218,7 +223,7 @@ fn parse_composition() {
     );
 }
 #[test]
-fn parser_concatenation() {
+fn test_parser_concatenation() {
     use super::super::Position;
     let mut parser = super::test_value(vec![
         Word::DirectoryConcatClose,
@@ -260,7 +265,7 @@ fn parser_concatenation() {
     );
 }
 #[test]
-fn parse_parenthesis() {
+fn test_parse_parenthesis() {
     use super::super::Position;
     let mut parser = super::test_value(vec![
         Word::SimpleString("var".to_string()),
@@ -269,10 +274,18 @@ fn parse_parenthesis() {
 
     assert_eq!(
         Blob {
-            position: Position { line: 0, column: 1 },
+            position: Position {
+                line: 0,
+                column: 56
+            },
             value: BlobValue::Name(Name::Variable("var".to_string())),
             pipes: Vec::new(),
         },
-        parser.parse_parenthesis().unwrap()
+        parser
+            .parse_parenthesis(Position {
+                line: 0,
+                column: 56
+            })
+            .unwrap()
     );
 }

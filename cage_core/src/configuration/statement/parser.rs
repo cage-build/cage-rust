@@ -118,7 +118,7 @@ impl<I: Iterator<Item = TokenResult>> Iterator for Parser<I> {
 }
 
 #[test]
-fn parse_file_statement() {
+fn test_parse_file_statement() {
     use super::{BlobValue, Position};
 
     let mut parser = super::test_value(vec![
@@ -140,7 +140,7 @@ fn parse_file_statement() {
     );
 }
 #[test]
-fn parse_tag_statement() {
+fn test_parse_tag_statement() {
     let mut parser = super::test_value(vec![
         Word::KeywordTag,
         Word::SimpleString("simpleTag".to_string()),

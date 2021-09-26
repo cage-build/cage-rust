@@ -85,14 +85,16 @@ where
             Word::SimpleString(v) => Ok(BlobValue::Name(Name::Variable(v))),
             Word::QuotedString(f) => Ok(BlobValue::Name(Name::Source(f))),
             Word::DollardString(u) => Ok(BlobValue::Name(Name::Url(u))),
-            Word::ParenthesisOpen => Ok(self.parse_parenthesis()?.value),
+            Word::ParenthesisOpen => {
+                Ok(BlobValue::Parenthesis(Box::new(self.parse_parenthesis(p)?)))
+            }
             w => unexpected_token(p, w, "generator value"),
         }
     }
 }
 
 #[test]
-fn parse_generator_statement() {
+fn test_parse_generator_statement() {
     let mut parser = super::test_value(vec![
         Word::KeywordGenerator,
         Word::SimpleString("g".to_string()),
@@ -128,7 +130,7 @@ fn parse_generator_statement() {
     assert_eq!(None, parser.next());
 }
 #[test]
-fn parse_generator_chain() {
+fn test_parse_generator_chain() {
     let mut p = super::test_value(vec![
         // first generator
         Word::PipeFile,
@@ -165,7 +167,11 @@ fn parse_generator_chain() {
             position: Position { line: 2, column: 1 },
             input_is_dir: true,
             name: Some(String::from("g")),
-            generator: BlobValue::Name(Name::Source("generator.wasm".to_string())),
+            generator: BlobValue::Parenthesis(Box::new(super::Blob {
+                position: Position { line: 5, column: 1 },
+                value: BlobValue::Name(Name::Source("generator.wasm".to_string())),
+                pipes: Vec::new(),
+            })),
             args: vec![
                 (Position { line: 8, column: 1 }, "arg1".to_string()),
                 (Position { line: 9, column: 1 }, "arg2".to_string())
