@@ -11,7 +11,7 @@ pub enum LexerError {
     HalfDefaultGenerator,
     /// A unknown system variable.
     UnknowSystem(String),
-    /// Double dollard, unknoow token.
+    /// Double dollard, unknow token.
     DoubleDollard,
     /// A dollard at end of the configuration file, expected a literal string or a system variable.
     DollardAtEOF,

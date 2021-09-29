@@ -80,7 +80,7 @@ pub enum Name {
 pub fn parse(
     config_content: &str,
 ) -> impl Iterator<Item = Result<Statement, ConfigurationError>> + '_ {
-    let l = Lexer::new(config_content).map(|i| Ok(i)).map(|r| match r {
+    let l = Lexer::new(config_content).map(|r| match r {
         Ok((p, Word::QuotedString(s))) => match escape(p, s) {
             Ok(s) => Ok((p, Word::QuotedString(s))),
             Err(e) => Err(e),

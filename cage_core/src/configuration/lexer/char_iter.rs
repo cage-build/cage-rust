@@ -44,6 +44,7 @@ impl<'a> Iterator for CharItem<'a> {
 #[test]
 fn test_char_iter() {
     let mut iter = CharItem::new("Hel\nlo");
+    assert_eq!(Position { line: 1, column: 1 }, iter.position());
     assert_eq!(Some('H'), iter.next());
     assert_eq!(Position { line: 1, column: 2 }, iter.position());
     assert_eq!(Some('e'), iter.next());

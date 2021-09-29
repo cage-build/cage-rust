@@ -3,22 +3,34 @@ mod error;
 mod escape;
 mod iterator;
 
-use super::Position;
+use super::{ConfigurationError, Position};
 use char_iter::CharItem;
 pub use error::LexerError;
 pub use escape::escape;
-use iterator::State;
 
 /// The Lexer, split the input into [`Word`]. It's an iterator.
 pub struct Lexer<'a> {
     chars: CharItem<'a>,
-    state: State,
     /// The content of the current comment, varibale name, ...
     buff: String,
-    /// For founded element, send at the comming call of `next` method.
-    comming: Option<Word>,
-    /// The founed error.
-    error: Option<LexerError>,
+    // The next readed char.
+    comming_char: Option<char>,
+}
+
+impl<'a> Iterator for Lexer<'a> {
+    type Item = Result<(Position, Word), ConfigurationError>;
+    fn next(&mut self) -> Option<Self::Item> {
+        let p = self.chars.position();
+        self.buff.clear();
+        match self.word_lexer() {
+            Some(Ok(w)) => Some(Ok((p, w))),
+            Some(Err(e)) => {
+                while self.chars.next().is_some() {}
+                Some(Err(ConfigurationError::Lexer(p, e)))
+            }
+            None => None,
+        }
+    }
 }
 
 /// One lexer token. Created with [`Lexer.next()`].
@@ -96,7 +108,7 @@ Enclose by double quote \"\".",
 ]
 "##,
     );
-    let mut next = || l.next().unwrap().1;
+    let mut next = || l.next().unwrap().unwrap().1;
 
     assert_eq!(Word::NewLine, next());
     assert_eq!(Word::Comment(" A comment".to_string()), next());
@@ -150,5 +162,4 @@ Enclose by double quote \"\".",
     assert_eq!(Word::NewLine, next());
 
     assert_eq!(None, l.next());
-    assert_eq!(Ok(()), l.err());
 }
