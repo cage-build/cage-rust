@@ -4,6 +4,7 @@ mod parser;
 use super::lexer::{escape, Lexer, Word};
 use super::{ConfigurationError, Position, TokenResult};
 use std::iter::Peekable;
+use std::str::Utf8Error;
 
 /// One statement from the file
 #[derive(Debug, PartialEq)]
@@ -78,9 +79,9 @@ pub enum Name {
 
 /// Parse the configuration file. After fail always return `None`.
 pub fn parse(
-    config_content: &str,
-) -> impl Iterator<Item = Result<Statement, ConfigurationError>> + '_ {
-    let l = Lexer::new(config_content).map(|r| match r {
+    config_content: &[u8],
+) -> Result<impl Iterator<Item = Result<Statement, ConfigurationError>> + '_, Utf8Error> {
+    let l = Lexer::new(config_content)?.map(|r| match r {
         Ok((p, Word::QuotedString(s))) => match escape(p, s) {
             Ok(s) => Ok((p, Word::QuotedString(s))),
             Err(e) => Err(e),
@@ -89,9 +90,9 @@ pub fn parse(
             Ok(s) => Ok((p, Word::DollardString(s))),
             Err(e) => Err(e),
         },
-        _ => r,
+        r => r,
     });
-    Parser::new(l)
+    Ok(Parser::new(l))
 }
 
 // An iterator of [`Statement`] from an iterator of [`Word`].

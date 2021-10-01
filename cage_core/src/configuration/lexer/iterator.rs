@@ -1,13 +1,14 @@
 use super::{CharItem, Lexer, LexerError, Word};
+use std::str::Utf8Error;
 
 impl<'a> Lexer<'a> {
     /// Create a new Lexer for the config.
-    pub fn new(config: &'a str) -> Self {
-        Self {
-            chars: CharItem::new(config),
+    pub fn new(config: &'a [u8]) -> Result<Self, Utf8Error> {
+        Ok(Self {
+            chars: CharItem::new(std::str::from_utf8(config)?),
             buff: String::new(),
             comming_char: None,
-        }
+        })
     }
 
     pub fn word_lexer(&mut self) -> Option<Result<Word, LexerError>> {

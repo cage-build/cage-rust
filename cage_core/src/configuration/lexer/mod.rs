@@ -93,7 +93,7 @@ pub enum Word {
 #[test]
 fn test_lexer() {
     let mut l = Lexer::new(
-        r##"
+        br##"
 # A comment
 tag superTag
 
@@ -107,7 +107,8 @@ Enclose by double quote \"\".",
 	variable,
 ]
 "##,
-    );
+    )
+    .unwrap();
     let mut next = || l.next().unwrap().unwrap().1;
 
     assert_eq!(Word::NewLine, next());
